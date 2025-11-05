@@ -5,6 +5,8 @@ project(minesweeper3d)
 # Including glad 
 include_directories(./glad)
 
+set(CMAKE_CXX_STANDARD 23)
+
 
 include(FetchContent)
 FetchContent_Declare(

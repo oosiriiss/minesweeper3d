@@ -1,13 +1,10 @@
 #include "glad.h"
 #include <GLFW/glfw3.h>
-#include <glm/common.hpp>
-#include <glm/ext/matrix_clip_space.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/trigonometric.hpp>
 #include <iostream>
 #include <logzy/logzy.hpp>
+
+#include "math.h"
+#include "math.hpp"
 
 struct Vec2 {
   float x;
@@ -128,16 +125,20 @@ int main() {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glm::mat4 m(1.0f);
-    m = glm::rotate(m, glm::radians(10 * static_cast<float>(glfwGetTime())),
-                    glm::vec3(0, 0, 1));
-    glm::mat4 p = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
-    glm::mat4 mvp = p * m;
-
     double time = glfwGetTime();
 
+    m4x4 m = m4x4::identity(1.0f);
+    m.print();
+    m = rotateZ(m, 10 * toRadians(static_cast<float>(time)));
+    // m.print();
+    m4x4 p = orthoProjection(-1.0f, 1.0f, -1.0f, 1.0f);
+    p.print();
+
+    m4x4 mvp = (p * m);
+    mvp.print();
+
     glUseProgram(program);
-    glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, (const GLfloat *)&mvp);
+    glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, (const GLfloat *)&mvp.data);
     glBindVertexArray(vertexArray);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
