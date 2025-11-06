@@ -3,38 +3,71 @@
 #include <iostream>
 #include <logzy/logzy.hpp>
 
-#include "math.h"
 #include "math.hpp"
 
-struct Vec2 {
-  float x;
-  float y;
+static const Vertex vertices[] = {
+    // Front face of cube - Red
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    //
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    // Back face of cube - Green
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    //
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    // Floor - Blue
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    //
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    // Ceil - Yellow
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    //
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    // Left wall - Purple
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    //
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    // Right wall - White
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    //
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+
 };
 
-struct Vec3 {
-  float x;
-  float y;
-  float z;
-};
-
-typedef struct Vertex {
-  Vec2 pos;
-  Vec3 col;
-} Vertex;
-
-static const Vertex vertices[3] = {{{-0.6f, -0.4f}, {1.f, 0.f, 0.f}},
-                                   {{0.6f, -0.4f}, {0.f, 1.f, 0.f}},
-                                   {{0.f, 0.6f}, {0.f, 0.f, 1.f}}};
+static constexpr auto verticesCount = sizeof(vertices) / sizeof(vertices[0]);
 
 static const char *vertexShaderText =
     "#version 330\n"
     "uniform mat4 MVP;\n"
     "in vec3 vCol;\n"
-    "in vec2 vPos;\n"
+    "in vec3 vPos;\n"
     "out vec3 color;\n"
     "void main()\n"
     "{\n"
-    "    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+    "    gl_Position = MVP * vec4(vPos, 1.0);\n"
     "    color = vCol;\n"
     "}\n";
 
@@ -82,6 +115,7 @@ int main() {
   glfwMakeContextCurrent(window);
   gladLoadGL(glfwGetProcAddress);
   glfwSwapInterval(1);
+  glEnable(GL_DEPTH_TEST);
 
   GLuint vertexBuffer;
   glGenBuffers(1, &vertexBuffer);
@@ -108,13 +142,14 @@ int main() {
   GLuint vertexArray;
 
   glGenVertexArrays(1, &vertexArray);
+
   glBindVertexArray(vertexArray);
   glEnableVertexAttribArray(vposLocation);
-  glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                        (void *)offsetof(Vertex, pos));
+  glVertexAttribPointer(vposLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                        (void *)offsetof(Vertex, position));
   glEnableVertexAttribArray(vcolLocation);
-  glVertexAttribPointer(vcolLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                        (void *)offsetof(Vertex, col));
+  glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                        (void *)offsetof(Vertex, color));
   while (!glfwWindowShouldClose(window)) {
 
     int width, height;
@@ -123,24 +158,30 @@ int main() {
 
     const float ratio = static_cast<float>(width) / height;
 
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     double time = glfwGetTime();
 
     m4x4 m = m4x4::identity(1.0f);
+    //m = rotateZ(m, 50 * toRadians(static_cast<float>(time)));
+    //logzy::info("after Z");
+    //m.print();
+    m = rotateY(m, 50 * toRadians(static_cast<float>(time)));
+    logzy::info("after Y");
     m.print();
-    m = rotateZ(m, 10 * toRadians(static_cast<float>(time)));
-    // m.print();
-    m4x4 p = orthoProjection(-1.0f, 1.0f, -1.0f, 1.0f);
-    p.print();
+    logzy::info("After translation");
+    m = translate(m, v3{.x = 0, .y = 0, .z = -10.0f});
+    m.print();
+    m4x4 p = orthoProjection(-5.0f, 5.0f, -5.0f, 5.0f);
 
+    logzy::info("MVP");
     m4x4 mvp = (p * m);
     mvp.print();
 
     glUseProgram(program);
     glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, (const GLfloat *)&mvp.data);
     glBindVertexArray(vertexArray);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, verticesCount);
 
     glfwSwapBuffers(window);
     glfwPollEvents();

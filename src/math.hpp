@@ -16,6 +16,11 @@ struct v3 {
   float z;
 };
 
+struct Vertex {
+  v3 position;
+  v3 color;
+};
+
 struct m4x4 {
   std::array<std::array<float, 4>, 4> data;
 
@@ -72,22 +77,40 @@ struct m4x4 {
   return m4x4{
 
       .data = {
-          std::array<float, 4>{2 / (right - left), 0.0F, 0.0F, -(right + left) / (right - left)}, // Row 1
-          std::array<float, 4>{0.0F, 2.0F / (top - bottom), 0.0F, -(top + bottom) / (top - bottom)}, // Row 2
-          std::array<float, 4>{0.0F, 0.0F, -2.0F / (far - near), -(far + near) / (far - near)}, // Row 3
+          std::array<float, 4>{2 / (right - left), 0.0F, 0.0F,
+                               -(right + left) / (right - left)}, // Row 1
+          std::array<float, 4>{0.0F, 2.0F / (top - bottom), 0.0F,
+                               -(top + bottom) / (top - bottom)}, // Row 2
+          std::array<float, 4>{0.0F, 0.0F, -2.0F / (far - near),
+                               -(far + near) / (far - near)}, // Row 3
           std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}        // Row 4
       }};
 }
 
-[[nodiscard]] constexpr m4x4 rotateX(const m4x4 &mat) {
+[[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, v3 vector) {
+
+  m4x4 translationMatrix = {
+      .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, vector.x},
+               std::array<float, 4>{0.0F, 1.0F, 0.0F, vector.y},
+               std::array<float, 4>{0.0F, 0.0F, 1.0F, vector.z},
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+  return mat * translationMatrix;
+}
+
+[[nodiscard]] constexpr m4x4 rotateX(const m4x4 &mat, float radians) {
   logzy::warn("using rotateX m4x4 not yet implemented");
   // TODO ::
   return m4x4{};
 }
-[[nodiscard]] constexpr m4x4 rotateY(const m4x4 &mat) {
-  logzy::warn("using rotateY m4x4 not yet implemented");
-  // TODO ::
-  return m4x4{};
+[[nodiscard]] constexpr m4x4 rotateY(const m4x4 &mat, float radians) {
+  m4x4 rotationMatrix{
+      .data = {std::array<float, 4>{cos(radians), 0.0F, sin(radians), 0.0F},
+               std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
+               std::array<float, 4>{-sin(radians), 0.0F, cos(radians), 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+  return mat * rotationMatrix;
 }
 [[nodiscard]] constexpr m4x4 rotateZ(const m4x4 &mat, float radians) {
   m4x4 rotationMatrix{
