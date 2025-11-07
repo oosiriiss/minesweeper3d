@@ -1,5 +1,9 @@
 #include "glad.h"
 #include <GLFW/glfw3.h>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <logzy/logzy.hpp>
 
@@ -7,77 +11,82 @@
 
 static const Vertex vertices[] = {
     // Front face of cube - Red
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
     //
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
     // Back face of cube - Green
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
     //
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
     // Floor - Blue
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     //
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     // Ceil - Yellow
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
     //
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
     // Left wall - Purple
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
     //
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
     // Right wall - White
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
     //
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
 
 };
 
 static constexpr auto verticesCount = sizeof(vertices) / sizeof(vertices[0]);
 
-static const char *vertexShaderText =
-    "#version 330\n"
-    "uniform mat4 MVP;\n"
-    "in vec3 vCol;\n"
-    "in vec3 vPos;\n"
-    "out vec3 color;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_Position = MVP * vec4(vPos, 1.0);\n"
-    "    color = vCol;\n"
-    "}\n";
+static const char *vertexShaderText = R"""(
+#version 330
+in vec3 vCol;
+in vec3 vPos;
 
-static const char *fragmentShaderText = "#version 330\n"
-                                        "in vec3 color;\n"
-                                        "out vec4 fragment;\n"
-                                        "void main()\n"
-                                        "{\n"
-                                        "    fragment = vec4(color, 1.0);\n"
-                                        "}\n";
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
+out vec3 color;
+void main() {
+    gl_Position = projection * view * model * vec4(vPos, 1.0);
+    color = vCol;
+};
+)""";
+
+static const char *fragmentShaderText = R"""(
+#version 330
+in vec3 color;
+out vec4 fragment;
+void main() {
+    fragment = vec4(color, 1.0);
+};
+)""";
 
 static void errorCallback(int code, const char *description) {
   logzy::error("GLFW Error occurred. Code {}. Description: {}", code,
@@ -126,16 +135,39 @@ int main() {
   glShaderSource(vertexShader, 1, &vertexShaderText, NULL);
   glCompileShader(vertexShader);
 
+  int success;
+  char infoLog[512]{};
+  int length = 0;
+  constexpr size_t infoLogSize = sizeof(infoLog) / sizeof(infoLog[0]);
+
+  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(vertexShader, infoLogSize, &length, infoLog);
+    logzy::critical("Vertex shader didn't compile. {}", infoLog);
+    return -1;
+  };
+  logzy::info("Vertex shader compiled.");
+
   const GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragmentShader, 1, &fragmentShaderText, NULL);
   glCompileShader(fragmentShader);
+
+  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+  if (!success) {
+    glGetShaderInfoLog(fragmentShader, infoLogSize, &length, infoLog);
+    logzy::critical("Fragment shader didn't compile. {}", infoLog);
+    return -1;
+  };
+  logzy::info("Fragment shader compiled");
 
   const GLuint program = glCreateProgram();
   glAttachShader(program, vertexShader);
   glAttachShader(program, fragmentShader);
   glLinkProgram(program);
 
-  const GLint mvpLocation = glGetUniformLocation(program, "MVP");
+  const GLint modelLocation = glGetUniformLocation(program, "model");
+  const GLint viewLocation = glGetUniformLocation(program, "view");
+  const GLint projectionLocation = glGetUniformLocation(program, "projection");
   const GLint vposLocation = glGetAttribLocation(program, "vPos");
   const GLint vcolLocation = glGetAttribLocation(program, "vCol");
 
@@ -162,24 +194,34 @@ int main() {
 
     double time = glfwGetTime();
 
-    m4x4 m = m4x4::identity(1.0f);
-    //m = rotateZ(m, 50 * toRadians(static_cast<float>(time)));
-    //logzy::info("after Z");
-    //m.print();
+    m4x4 m(scale(m4x4::identity(1.0f), v3{.x = 0.4f, .y = 0.4f, .z = 0.4f}));
     m = rotateY(m, 50 * toRadians(static_cast<float>(time)));
-    logzy::info("after Y");
-    m.print();
-    logzy::info("After translation");
-    m = translate(m, v3{.x = 0, .y = 0, .z = -10.0f});
-    m.print();
-    m4x4 p = orthoProjection(-5.0f, 5.0f, -5.0f, 5.0f);
+    m = rotateX(m, 50 * toRadians(static_cast<float>(time)));
+    m = rotateZ(m, 50 * toRadians(static_cast<float>(time)));
+    m4x4 v = translate(m4x4::identity(1.0f), v3{.x = 0, .y = 0, .z = -3.0f});
+    auto p = perspective();
 
-    logzy::info("MVP");
-    m4x4 mvp = (p * m);
-    mvp.print();
+    glm::mat4 model(1.0f);
+
+    model = glm::rotate(model, glm::radians(static_cast<float>(time) * 100.0f),
+                        glm::vec3(0.0f, 1.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 100.0f);
 
     glUseProgram(program);
-    glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, (const GLfloat *)&mvp.data);
+    glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (const GLfloat *)&m.data);
+    // glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (const GLfloat
+    // *)glm::value_ptr(model));
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, (const GLfloat *)&v.data);
+    // glUniformMatrix4fv(viewLocation, 1, GL_FALSE,
+    //                    (const GLfloat *)glm::value_ptr(view));
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE,
+                       (const GLfloat *)&p.data);
+    // glUniformMatrix4fv(projectionLocation, 1, GL_FALSE,
+    //                    (const GLfloat *)glm::value_ptr(projection));
     glBindVertexArray(vertexArray);
     glDrawArrays(GL_TRIANGLES, 0, verticesCount);
 

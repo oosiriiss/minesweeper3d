@@ -22,6 +22,7 @@ struct Vertex {
 };
 
 struct m4x4 {
+  // Data of the matrxi stored in column-major order
   std::array<std::array<float, 4>, 4> data;
 
   [[nodiscard]] static constexpr m4x4 identity(float diagonalValue) {
@@ -33,7 +34,7 @@ struct m4x4 {
     return identityMatrix;
   }
 
-  [[nodiscard]] constexpr m4x4 toColumn() const noexcept {
+  [[nodiscard]] constexpr m4x4 transposed() const noexcept {
     m4x4 columnMajor;
 
     for (int i = 0; i < data.size(); ++i) {
@@ -51,9 +52,9 @@ struct m4x4 {
       for (int j = 0; j < data[i].size(); ++j) {
         float sum = 0;
         for (int k = 0; k < data.size(); ++k) {
-          sum += data[i][k] * other.data[k][j];
+          sum += data[k][i] * other.data[j][k];
         }
-        result.data[i][j] = sum;
+        result.data[j][i] = sum;
       }
     }
 
@@ -69,39 +70,60 @@ struct m4x4 {
   return degrees * std::numbers::pi / 180.0F;
 }
 
-[[nodiscard]] constexpr m4x4 orthoProjection(float left, float right,
-                                             float bottom, float top,
-                                             float near = 0.1F,
-                                             float far = 100.0F) {
+[[nodiscard]] constexpr m4x4 orthographic(float left, float right, float bottom,
+                                          float top, float near = 0.1F,
+                                          float far = 100.0F) {
 
   return m4x4{
 
+      .data = {std::array<float, 4>{2 / (right - left), 0.0F, 0.0F,
+                                    -(right + left) / (right - left)}, // C1
+               std::array<float, 4>{0.0F, 2.0F / (top - bottom), 0.0F,
+                                    -(top + bottom) / (top - bottom)}, // C2
+               std::array<float, 4>{0.0F, 0.0F, -2.0F / (far - near),
+                                    -(far + near) / (far - near)}, // C3
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};     // C4
+}
+
+[[nodiscard]] constexpr m4x4 perspective(float fov = 50.0F, float near = 0.1F,
+                                         float far = 100.0F) {
+  float x = 1.0F / (toRadians(fov / 2.0F));
+
+  return m4x4{
       .data = {
-          std::array<float, 4>{2 / (right - left), 0.0F, 0.0F,
-                               -(right + left) / (right - left)}, // Row 1
-          std::array<float, 4>{0.0F, 2.0F / (top - bottom), 0.0F,
-                               -(top + bottom) / (top - bottom)}, // Row 2
-          std::array<float, 4>{0.0F, 0.0F, -2.0F / (far - near),
-                               -(far + near) / (far - near)}, // Row 3
-          std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}        // Row 4
-      }};
+          std::array<float, 4>{x, 0.0F, 0.0F, 0.0F},
+          std::array<float, 4>{0.0F, x, 0.0F, 0.0F},
+          std::array<float, 4>{0.0F, 0.0F, -far / (far - near), -1.0F},
+          std::array<float, 4>{0.0F, 0.0F, -far * near / (far - near), 0.0F}}};
 }
 
 [[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, v3 vector) {
 
   m4x4 translationMatrix = {
-      .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, vector.x},
-               std::array<float, 4>{0.0F, 1.0F, 0.0F, vector.y},
-               std::array<float, 4>{0.0F, 0.0F, 1.0F, vector.z},
-               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+      .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
+               std::array<float, 4>{vector.x, vector.y, vector.z, 1.0F}}};
 
   return mat * translationMatrix;
 }
 
+[[nodiscard]] constexpr m4x4 scale(const m4x4 &mat, v3 vector) {
+
+  m4x4 scaleMatrix = {.data = {std::array<float, 4>{vector.x, 0.0F, 0.0F, 0.0F},
+                               std::array<float, 4>{0.0F, vector.y, 0.0F, 0.0F},
+                               std::array<float, 4>{0.0F, 0.0F, vector.z, 0.0F},
+                               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+  return mat * scaleMatrix;
+}
+
 [[nodiscard]] constexpr m4x4 rotateX(const m4x4 &mat, float radians) {
-  logzy::warn("using rotateX m4x4 not yet implemented");
-  // TODO ::
-  return m4x4{};
+  return m4x4{
+      .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, cos(radians), -sin(radians), 0.0F},
+               std::array<float, 4>{0.0F, sin(radians), cos(radians), 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 }
 [[nodiscard]] constexpr m4x4 rotateY(const m4x4 &mat, float radians) {
   m4x4 rotationMatrix{
