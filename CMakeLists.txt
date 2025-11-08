@@ -26,6 +26,9 @@ add_executable(
 
    ./src/shader.cpp
    ./src/shader.hpp
+
+   ./src/program.cpp
+   ./src/program.hpp
 )
 
 

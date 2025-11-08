@@ -6,8 +6,11 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 #include <logzy/logzy.hpp>
+#include <string_view>
+#include <utility>
 
 #include "math.hpp"
+#include "program.hpp"
 #include "shader.hpp"
 
 static const Vertex vertices[] = {
@@ -64,7 +67,7 @@ static const Vertex vertices[] = {
 
 static constexpr auto verticesCount = sizeof(vertices) / sizeof(vertices[0]);
 
-static const char *vertexShaderText = R"""(
+constexpr static std::string_view vertexShaderText = R"""(
 #version 330
 in vec3 vCol;
 in vec3 vPos;
@@ -80,7 +83,7 @@ void main() {
 };
 )""";
 
-static const char *fragmentShaderText = R"""(
+constexpr static std::string_view fragmentShaderText = R"""(
 #version 330
 in vec3 color;
 out vec4 fragment;
@@ -132,35 +135,28 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  std::optional<Shader> vertexShaderOpt =
-      Shader::fromString(vertexShaderText, Shader::Type::Vertex);
+  std::optional<Program> programOpt = Program::create(std::vector{
+      std::pair{vertexShaderText, Shader::Type::Vertex},
+      std::pair{fragmentShaderText, Shader::Type::Fragment},
+  });
 
-  if (!vertexShaderOpt) {
+  Program &program = *programOpt;
+
+  GLint vposLocation = -1;
+  GLint vcolLocation = -1;
+
+  if (auto vposLocationOpt = program.getAttribLocation("vPos")) {
+    vposLocation = *vposLocationOpt;
+  } else {
     return -1;
   }
-  auto &vertexShader = *vertexShaderOpt;
-
-  std::optional<Shader> fragmentShaderOpt =
-      Shader::fromString(fragmentShaderText, Shader::Type::Fragment);
-
-  if (!fragmentShaderOpt) {
+  if (auto vcolLocationOpt = program.getAttribLocation("vCol")) {
+    vcolLocation = *vcolLocationOpt;
+  } else {
     return -1;
   }
-  auto &fragmentShader = *fragmentShaderOpt;
-
-  const GLuint program = glCreateProgram();
-  glAttachShader(program, vertexShader.ID);
-  glAttachShader(program, fragmentShader.ID);
-  glLinkProgram(program);
-
-  const GLint modelLocation = glGetUniformLocation(program, "model");
-  const GLint viewLocation = glGetUniformLocation(program, "view");
-  const GLint projectionLocation = glGetUniformLocation(program, "projection");
-  const GLint vposLocation = glGetAttribLocation(program, "vPos");
-  const GLint vcolLocation = glGetAttribLocation(program, "vCol");
 
   GLuint vertexArray;
-
   glGenVertexArrays(1, &vertexArray);
 
   glBindVertexArray(vertexArray);
@@ -199,17 +195,11 @@ int main() {
     glm::mat4 projection = glm::mat4(1.0f);
     projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 100.0f);
 
-    glUseProgram(program);
-    glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (const GLfloat *)&m.data);
-    // glUniformMatrix4fv(modelLocation, 1, GL_FALSE, (const GLfloat
-    // *)glm::value_ptr(model));
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, (const GLfloat *)&v.data);
-    // glUniformMatrix4fv(viewLocation, 1, GL_FALSE,
-    //                    (const GLfloat *)glm::value_ptr(view));
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE,
-                       (const GLfloat *)&p.data);
-    // glUniformMatrix4fv(projectionLocation, 1, GL_FALSE,
-    //                    (const GLfloat *)glm::value_ptr(projection));
+    program.use();
+    program.setM4x4("model", m);
+    program.setM4x4("view", v);
+    program.setM4x4("projection", p);
+
     glBindVertexArray(vertexArray);
     glDrawArrays(GL_TRIANGLES, 0, verticesCount);
 

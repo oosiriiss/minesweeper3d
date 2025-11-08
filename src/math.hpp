@@ -25,6 +25,10 @@ struct m4x4 {
   // Data of the matrxi stored in column-major order
   std::array<std::array<float, 4>, 4> data;
 
+  [[nodiscard]] constexpr const float *dataPtr() const {
+    return static_cast<const float *>(&data[0][0]);
+  }
+
   [[nodiscard]] static constexpr m4x4 identity(float diagonalValue) {
     m4x4 identityMatrix;
     for (int i = 0; i < identityMatrix.data.size(); ++i) {
