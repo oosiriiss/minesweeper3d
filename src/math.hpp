@@ -123,11 +123,14 @@ struct m4x4 {
 }
 
 [[nodiscard]] constexpr m4x4 rotateX(const m4x4 &mat, float radians) {
-  return m4x4{
+
+  m4x4 rotationMatrix = m4x4{
       .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
-               std::array<float, 4>{0.0F, cos(radians), -sin(radians), 0.0F},
-               std::array<float, 4>{0.0F, sin(radians), cos(radians), 0.0F},
+               std::array<float, 4>{0.0F, cos(radians), sin(radians), 0.0F},
+               std::array<float, 4>{0.0F, -sin(radians), cos(radians), 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+  return mat * rotationMatrix;
 }
 [[nodiscard]] constexpr m4x4 rotateY(const m4x4 &mat, float radians) {
   m4x4 rotationMatrix{
