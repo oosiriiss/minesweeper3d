@@ -14,12 +14,6 @@ struct v3 {
   float x;
   float y;
   float z;
-
-  [[nodiscard]] v3 normalize() const {
-    const float length = sqrt(x * x + y * y + z * z);
-
-    return v3{.x = x / length, .y = y / length, .z = z / length};
-  }
 };
 
 struct Vertex {
@@ -115,7 +109,7 @@ struct m4x4 {
                std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
                std::array<float, 4>{vector.x, vector.y, vector.z, 1.0F}}};
 
-  return translationMatrix * mat;
+  return mat * translationMatrix;
 }
 
 [[nodiscard]] constexpr m4x4 scale(const m4x4 &mat, v3 vector) {
@@ -125,7 +119,7 @@ struct m4x4 {
                                std::array<float, 4>{0.0F, 0.0F, vector.z, 0.0F},
                                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
-  return scaleMatrix * mat;
+  return mat * scaleMatrix;
 }
 
 /**
@@ -139,7 +133,7 @@ struct m4x4 {
                std::array<float, 4>{0.0F, -sin(radians), cos(radians), 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
-  return rotationMatrix * mat;
+  return mat * rotationMatrix;
 }
 
 /**
@@ -152,7 +146,7 @@ struct m4x4 {
                std::array<float, 4>{sin(radians), 0.0F, cos(radians), 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
-  return rotationMatrix * mat;
+  return mat * rotationMatrix;
 }
 
 /**
@@ -165,7 +159,7 @@ struct m4x4 {
                std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
-  return rotationMatrix * mat;
+  return mat * rotationMatrix;
 }
 
 /**
@@ -175,30 +169,27 @@ struct m4x4 {
 
   const float c = cos(radians);
   const float s = sin(radians);
-  const float ic = 1.0F - c;
 
-  const v3 normalized = axis.normalize();
+  const float x = axis.x;
+  const float y = axis.y;
+  const float z = axis.z;
 
-  const float x = normalized.x;
-  const float y = normalized.y;
-  const float z = normalized.z;
-
-  m4x4 rotationMatrix{.data = {std::array<float, 4>{                    //
-                                                    c + x * x * ic,     //
-                                                    x * y * ic + z * s, //
-                                                    z * x * ic - y * s, //
-                                                    0.0F},              //
+  m4x4 rotationMatrix{.data = {std::array<float, 4>{                         //
+                                                    c + x * x * (1 - c),     //
+                                                    x * y * (1 - c) + z * s, //
+                                                    z * x * (1 - c) - y * s, //
+                                                    0.0F},                   //
                                std::array<float, 4>{
-                                   x * y * ic - z * s, //
-                                   c + y * y * ic,     //
-                                   z * y * ic + x * s, //
-                                   0.0F                //
+                                   x * y * (1 - c) - z * s, //
+                                   c + y * y * (1 - c),     //
+                                   z * y * (1 - c) + x * s, //
+                                   0.0F                     //
                                },
                                std::array<float, 4>{
-                                   x * z * ic + y * s, //
-                                   y * z * ic - x * s, //
-                                   c + z * z * ic,     //
-                                   0.0F                //
+                                   x * z * (1 - c) + y * s, //
+                                   y * z * (1 - c) - x * s, //
+                                   c + z * z * (1 - c),     //
+                                   0.0F                     //
                                },
                                std::array<float, 4>{
                                    0.0F,
@@ -207,5 +198,5 @@ struct m4x4 {
                                    1.0F,
                                }}};
 
-  return rotationMatrix * mat;
+  return mat * rotationMatrix;
 }

@@ -15,53 +15,53 @@
 
 static const Vertex vertices[] = {
     // Front face of cube - Red
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
     //
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
     // Back face of cube - Green
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
     //
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
     // Floor - Blue
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
     //
-    {{-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{0.5f, -0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
     // Ceil - Yellow
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
     //
-    {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
     // Left wall - Purple
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
     //
-    {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
     // Right wall - White
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, -0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
     //
-    {{0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
-    {{0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
 
 };
 
@@ -178,22 +178,17 @@ int main() {
 
     double time = glfwGetTime();
 
-    m4x4 m(scale(m4x4::identity(1.0f), v3{.x = 0.4f, .y = 0.4f, .z = 0.4f}));
-    m = rotateY(m, 50 * toRadians(static_cast<float>(time)));
-    m = rotateX(m, 50 * toRadians(static_cast<float>(time)));
-    m = rotateZ(m, 50 * toRadians(static_cast<float>(time)));
-    m4x4 v = translate(m4x4::identity(1.0f), v3{.x = 0, .y = 0, .z = -3.0f});
+    m4x4 m(scale(m4x4::identity(1.0f), v3{.x = 0.3f, .y = 0.3f, .z = 0.3f}));
+    m4x4 m2 = rotate(m, toRadians(50.0F * static_cast<float>(time)),
+                v3{.x = 0.5f, .y = 0.5f, .z = 0.5f});
+    m2 = translate(m2, v3{.x = -2.0F, .y = 0.0F, .z = 0.0F});
+
+    m = rotateX(m, toRadians(50.0F * static_cast<float>(time)));
+    m = rotateY(m, toRadians(50.0F * static_cast<float>(time)));
+    m = rotateZ(m, toRadians(50.0F * static_cast<float>(time)));
+    m4x4 v =
+        translate(m4x4::identity(1.0f), v3{.x = 1.0F, .y = 0, .z = -10.0f});
     auto p = perspective();
-
-    glm::mat4 model(1.0f);
-
-    model = glm::rotate(model, glm::radians(static_cast<float>(time) * 100.0f),
-                        glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.2f));
-    glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-    glm::mat4 projection = glm::mat4(1.0f);
-    projection = glm::perspective(glm::radians(45.0f), ratio, 0.1f, 100.0f);
 
     program.use();
     program.setM4x4("model", m);
@@ -201,6 +196,9 @@ int main() {
     program.setM4x4("projection", p);
 
     glBindVertexArray(vertexArray);
+    glDrawArrays(GL_TRIANGLES, 0, verticesCount);
+
+    program.setM4x4("model", m2);
     glDrawArrays(GL_TRIANGLES, 0, verticesCount);
 
     glfwSwapBuffers(window);
