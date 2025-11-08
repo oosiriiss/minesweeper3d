@@ -8,6 +8,7 @@
 #include <logzy/logzy.hpp>
 
 #include "math.hpp"
+#include "shader.hpp"
 
 static const Vertex vertices[] = {
     // Front face of cube - Red
@@ -131,38 +132,25 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  const GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderText, NULL);
-  glCompileShader(vertexShader);
+  std::optional<Shader> vertexShaderOpt =
+      Shader::fromString(vertexShaderText, Shader::Type::Vertex);
 
-  int success;
-  char infoLog[512]{};
-  int length = 0;
-  constexpr size_t infoLogSize = sizeof(infoLog) / sizeof(infoLog[0]);
-
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(vertexShader, infoLogSize, &length, infoLog);
-    logzy::critical("Vertex shader didn't compile. {}", infoLog);
+  if (!vertexShaderOpt) {
     return -1;
-  };
-  logzy::info("Vertex shader compiled.");
+  }
+  auto &vertexShader = *vertexShaderOpt;
 
-  const GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmentShaderText, NULL);
-  glCompileShader(fragmentShader);
+  std::optional<Shader> fragmentShaderOpt =
+      Shader::fromString(fragmentShaderText, Shader::Type::Fragment);
 
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(fragmentShader, infoLogSize, &length, infoLog);
-    logzy::critical("Fragment shader didn't compile. {}", infoLog);
+  if (!fragmentShaderOpt) {
     return -1;
-  };
-  logzy::info("Fragment shader compiled");
+  }
+  auto &fragmentShader = *fragmentShaderOpt;
 
   const GLuint program = glCreateProgram();
-  glAttachShader(program, vertexShader);
-  glAttachShader(program, fragmentShader);
+  glAttachShader(program, vertexShader.ID);
+  glAttachShader(program, fragmentShader.ID);
   glLinkProgram(program);
 
   const GLint modelLocation = glGetUniformLocation(program, "model");

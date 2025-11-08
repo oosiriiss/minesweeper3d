@@ -5,8 +5,6 @@ project(minesweeper3d)
 # Including glad 
 include_directories(./glad)
 
-set(CMAKE_CXX_STANDARD 23)
-
 
 include(FetchContent)
 FetchContent_Declare(
@@ -19,9 +17,15 @@ FetchContent_MakeAvailable(logzy)
 
 add_executable(
    minesweeper3d
+
    ./glad/glad.c
 
    ./src/main.cpp
+
+   ./src/math.hpp
+
+   ./src/shader.cpp
+   ./src/shader.hpp
 )
 
 
@@ -37,6 +41,8 @@ find_package(OpenGL REQUIRED)
 
 # TODO :: GLM is only for now so I dont wanna bother setting up dependency properly
 find_package(glm REQUIRED)
+
+target_compile_features(minesweeper3d PUBLIC cxx_std_23)
 
 target_link_libraries(minesweeper3d glfw OpenGL::GL logzy::logzy glm::glm)
 
