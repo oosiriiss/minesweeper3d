@@ -19,6 +19,7 @@ Program::create(const std::vector<std::pair<std::string_view, Shader::Type>>
   logzy::debug("Program {} created", p->ID);
 
   {
+    // Shaders are auto-deleted
     std::vector<Shader> shaders;
 
     for (const auto &[shaderSource, type] : shaderSources) {

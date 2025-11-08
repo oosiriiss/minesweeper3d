@@ -71,6 +71,7 @@ constexpr static std::string_view vertexShaderText = R"""(
 #version 330
 in vec3 vCol;
 in vec3 vPos;
+in vec3 vOffset;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -78,7 +79,7 @@ uniform mat4 projection;
 
 out vec3 color;
 void main() {
-    gl_Position = projection * view * model * vec4(vPos, 1.0);
+    gl_Position = projection * view * model * vec4(vPos + vOffset, 1.0);
     color = vCol;
 };
 )""";
@@ -107,7 +108,8 @@ int main() {
   // Initializing glfw
 
   if (!glfwInit()) {
-    std::cout << "GLFW not intialized\n";
+    logzy::critical("GLFW not intialized\n");
+    return -1;
   }
 
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -118,7 +120,8 @@ int main() {
       glfwCreateWindow(800, 800, "My window", nullptr, nullptr);
 
   if (!window) {
-    std::cout << "Couldn't create GLFW window\n";
+    logzy::critical("Couldn't create GLFW window\n");
+    return -2;
   }
 
   glfwSetErrorCallback(errorCallback);
@@ -135,6 +138,30 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
+  // Generating cube offsets
+
+  constexpr v3 dim{.x = 10, .y = 10, .z = 10};
+  constexpr std::size_t cubesTotal =
+      static_cast<std::size_t>(dim.x * dim.y * dim.z);
+
+  std::array<v3, cubesTotal> cubes{};
+
+  float spacing = 3.0f;
+
+  for (int x = 0; x < dim.x; ++x) {
+    for (int y = 0; y < dim.y; ++y) {
+      for (int z = 0; z < dim.z; ++z) {
+        cubes[x * 100 + y * 10 + z] =
+            v3{.x = spacing * x, .y = spacing * y, .z = spacing * z};
+      }
+    }
+  }
+
+  GLuint instanceBuffer;
+  glGenBuffers(1, &instanceBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(cubes), cubes.data(), GL_STATIC_DRAW);
+
   std::optional<Program> programOpt = Program::create(std::vector{
       std::pair{vertexShaderText, Shader::Type::Vertex},
       std::pair{fragmentShaderText, Shader::Type::Fragment},
@@ -143,6 +170,7 @@ int main() {
   Program &program = *programOpt;
 
   GLint vposLocation = -1;
+  GLint voffsetLocation = -1;
   GLint vcolLocation = -1;
 
   if (auto vposLocationOpt = program.getAttribLocation("vPos")) {
@@ -155,17 +183,30 @@ int main() {
   } else {
     return -1;
   }
+  if (auto voffsetLocationOpt = program.getAttribLocation("vOffset")) {
+    voffsetLocation = *voffsetLocationOpt;
+  } else {
+    return -1;
+  }
 
   GLuint vertexArray;
   glGenVertexArrays(1, &vertexArray);
 
   glBindVertexArray(vertexArray);
+  glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
   glEnableVertexAttribArray(vposLocation);
   glVertexAttribPointer(vposLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, position));
   glEnableVertexAttribArray(vcolLocation);
   glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, color));
+
+  glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
+  glEnableVertexAttribArray(voffsetLocation);
+  glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE, sizeof(v3),
+                        nullptr);
+  glVertexAttribDivisor(voffsetLocation, 1);
+
   while (!glfwWindowShouldClose(window)) {
 
     int width, height;
@@ -178,16 +219,13 @@ int main() {
 
     double time = glfwGetTime();
 
-    m4x4 m(scale(m4x4::identity(1.0f), v3{.x = 0.3f, .y = 0.3f, .z = 0.3f}));
-    m4x4 m2 = rotate(m, toRadians(50.0F * static_cast<float>(time)),
-                v3{.x = 0.5f, .y = 0.5f, .z = 0.5f});
-    m2 = translate(m2, v3{.x = -2.0F, .y = 0.0F, .z = 0.0F});
+    m4x4 m = m4x4::identity(1.0f);
+    // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
+    m = rotate(m, toRadians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
+    m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
 
-    m = rotateX(m, toRadians(50.0F * static_cast<float>(time)));
-    m = rotateY(m, toRadians(50.0F * static_cast<float>(time)));
-    m = rotateZ(m, toRadians(50.0F * static_cast<float>(time)));
-    m4x4 v =
-        translate(m4x4::identity(1.0f), v3{.x = 1.0F, .y = 0, .z = -10.0f});
+    m4x4 v = translate(m4x4::identity(1.0f), v3{.x = 1.0F, .z = -20.0f});
+
     auto p = perspective();
 
     program.use();
@@ -196,16 +234,15 @@ int main() {
     program.setM4x4("projection", p);
 
     glBindVertexArray(vertexArray);
-    glDrawArrays(GL_TRIANGLES, 0, verticesCount);
-
-    program.setM4x4("model", m2);
-    glDrawArrays(GL_TRIANGLES, 0, verticesCount);
+    // glDrawArrays(GL_TRIANGLES, 0, verticesCount);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, verticesCount, cubes.size());
 
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
 
   glfwDestroyWindow(window);
+
   // Shutting odwn glfw
   glfwTerminate();
 
