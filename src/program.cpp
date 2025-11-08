@@ -18,21 +18,27 @@ Program::create(const std::vector<std::pair<std::string_view, Shader::Type>>
 
   logzy::debug("Program {} created", p->ID);
 
-  for (const auto &[shaderSource, type] : shaderSources) {
-    std::optional<Shader> s = Shader::fromString(shaderSource, type);
+  {
+    std::vector<Shader> shaders;
 
-    if (!s) {
-      logzy::error("Couldn't create program - failed to create shader");
-      return std::nullopt;
+    for (const auto &[shaderSource, type] : shaderSources) {
+      std::optional<Shader> s = Shader::fromString(shaderSource, type);
+
+      if (!s) {
+        logzy::error("Couldn't create program - failed to create shader");
+        return std::nullopt;
+      }
+
+      logzy::debug("Attaching shader {} to program {}", s->ID, p->ID);
+      glAttachShader(p->ID, s->ID);
+
+      shaders.emplace_back(std::move(*s));
     }
 
-    logzy::debug("Attaching shader {} to program {}", s->ID, p->ID);
-
-    glAttachShader(p->ID, s->ID);
+    logzy::debug("Linking program {} with {} shaders", p->ID, shaders.size());
+    // Linking
+    glLinkProgram(p->ID);
   }
-
-  // Linking
-  glLinkProgram(p->ID);
 
   GLint success;
   // Checking link errors

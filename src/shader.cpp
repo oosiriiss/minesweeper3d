@@ -2,13 +2,37 @@
 #include <logzy/logzy.hpp>
 #include <optional>
 
+Shader::Shader(GLuint ID) : ID(ID) {}
+
+Shader::Shader(Shader &&other) noexcept {
+  ID = other.ID;
+  other.ID = 0;
+}
+
+Shader &Shader::operator=(Shader &&other) noexcept {
+  ID = other.ID;
+  other.ID = 0;
+
+  return *this;
+}
+
+Shader::~Shader() {
+  // Deleting only valid shaders.
+  // At this point the shader should be already linked to the program
+
+  if (ID != 0) {
+    logzy::info("Deleting shader {}", ID);
+    glDeleteShader(ID);
+  }
+}
+
 [[nodiscard]] std::optional<Shader>
 Shader::fromString(std::string_view shaderSource, Shader::Type type) {
 
   const GLuint openglShaderType = toOpenGL(type);
 
   // Creating the shader object
-  std::optional<Shader> s({.ID = glCreateShader(openglShaderType)});
+  std::optional<Shader> s(glCreateShader(openglShaderType));
 
   if (s->ID == 0) {
     logzy::error("Couldn't create {} shader.", type);

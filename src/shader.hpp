@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "glad.h"
 #include <format>
@@ -8,6 +8,18 @@
 
 struct Shader {
   GLuint ID = 0;
+
+  Shader() = default;
+  Shader(GLuint ID);
+
+  // Copying shader doesn't really make sense. As it is a temporary object
+  Shader(const Shader &other) = delete;
+  Shader &operator=(const Shader &other) = delete;
+  // Moving is ok
+  Shader(Shader &&other) noexcept;
+  Shader &operator=(Shader &&other) noexcept;
+
+  ~Shader();
 
   enum class Type { Vertex, Fragment };
 
