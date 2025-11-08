@@ -6,14 +6,14 @@
 #include <numbers>
 
 struct v2 {
-  float x;
-  float y;
+  float x = 0.0f;
+  float y = 0.0f;
 };
 
 struct v3 {
-  float x;
-  float y;
-  float z;
+  float x = 0.0f;
+  float y = 0.0f;
+  float z = 0.0f;
 
   [[nodiscard]] v3 normalize() const {
     const float length = sqrt(x * x + y * y + z * z);
@@ -69,10 +69,6 @@ struct m4x4 {
     }
 
     return result;
-  }
-
-  void print() const {
-    logzy::info("m4x4\n{}\n{}\n{}\n{}", data[0], data[1], data[2], data[3]);
   }
 };
 
@@ -209,3 +205,46 @@ struct m4x4 {
 
   return rotationMatrix * mat;
 }
+
+template <> struct std::formatter<v2, char> {
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(v2 v, FmtContext &ctx) const {
+
+    return std::format_to(ctx.out(), "v2({},{})", v.x, v.y);
+  }
+};
+
+template <> struct std::formatter<v3, char> {
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(v3 v, FmtContext &ctx) const {
+
+    return std::format_to(ctx.out(), "v3({},{},{})", v.x, v.y, v.z);
+  }
+};
+
+template <> struct std::formatter<m4x4, char> {
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(m4x4 m, FmtContext &ctx) const {
+
+    return std::format_to(ctx.out(), "m4x4 (Column-major) (\n{}\n{}\n{}\n{})\n",
+                          m.data[0], m.data[1], m.data[2], m.data[3]);
+  }
+};
