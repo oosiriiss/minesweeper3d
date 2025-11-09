@@ -103,6 +103,7 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
+
 int main() {
 
   // Initializing glfw
@@ -207,7 +208,39 @@ int main() {
                         nullptr);
   glVertexAttribDivisor(voffsetLocation, 1);
 
+  v3 cameraPosition{.z = 20.0f};
+  v3 cameraTarget{};
+  v3 cameraUp{.x = 0.0f, .y = 1.0f, .z = 0.0f};
+  v3 cameraRight{.x = 1.0f, .y = 0.0f, .z = 0.0f};
+
+  double lastTime = glfwGetTime();
+
   while (!glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+
+    double time = glfwGetTime();
+
+    double dt = lastTime - time;
+    lastTime = time;
+
+    if (glfwGetKey(window, GLFW_KEY_A)) {
+      cameraPosition.x += dt * 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D)) {
+      cameraPosition.x -= dt * 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_W)) {
+      cameraPosition.z += dt * 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S)) {
+      cameraPosition.z -= dt * 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE)) {
+      cameraPosition.y -= dt * 10.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
+      cameraPosition.y += dt * 10.0f;
+    }
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -217,14 +250,12 @@ int main() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    double time = glfwGetTime();
-
     m4x4 m = m4x4::identity(1.0f);
     // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
     m = rotate(m, toRadians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
     m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
 
-    m4x4 v = translate(m4x4::identity(1.0f), v3{.x = 1.0F, .z = -20.0f});
+    m4x4 v = lookAt(cameraPosition, cameraTarget, cameraUp, cameraRight);
 
     auto p = perspective();
 
@@ -238,7 +269,6 @@ int main() {
     glDrawArraysInstanced(GL_TRIANGLES, 0, verticesCount, cubes.size());
 
     glfwSwapBuffers(window);
-    glfwPollEvents();
   }
 
   glfwDestroyWindow(window);

@@ -15,10 +15,14 @@ struct v3 {
   float y = 0.0f;
   float z = 0.0f;
 
-  [[nodiscard]] v3 normalize() const {
+  [[nodiscard]] constexpr v3 normalize() const {
     const float length = sqrt(x * x + y * y + z * z);
 
     return v3{.x = x / length, .y = y / length, .z = z / length};
+  }
+
+  [[nodiscard]] constexpr v3 operator-(v3 other) const {
+    return v3{.x = x - other.x, .y = y - other.y, .z = z - other.z};
   }
 };
 
@@ -204,6 +208,27 @@ struct m4x4 {
                                }}};
 
   return rotationMatrix * mat;
+}
+
+[[nodiscard]] constexpr m4x4 lookAt(v3 cameraPosition, v3 target, v3 up,
+                                    v3 right) {
+
+  v3 direction = (cameraPosition - target).normalize();
+
+  m4x4 positionMatrix{
+      .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
+               std::array<float, 4>{-cameraPosition.x, -cameraPosition.y,
+                                    -cameraPosition.z, 1.0F}}};
+
+  m4x4 rotationMatrix{
+      .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
+               std::array<float, 4>{right.y, up.y, direction.y, 0.0F},
+               std::array<float, 4>{right.z, up.z, direction.z, 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+  return rotationMatrix * positionMatrix;
 }
 
 template <> struct std::formatter<v2, char> {
