@@ -208,10 +208,15 @@ int main() {
                         nullptr);
   glVertexAttribDivisor(voffsetLocation, 1);
 
+  v3 cameraRotations{
+      .x = 0.0f,   // Pitch
+      .y = -90.0f, // yaw
+      .z = 0.0f,   // roll
+  };
+
   v3 cameraPosition{.z = 20.0f};
-  v3 cameraTarget{};
-  v3 cameraUp{.x = 0.0f, .y = 1.0f, .z = 0.0f};
-  v3 cameraRight{.x = 1.0f, .y = 0.0f, .z = 0.0f};
+  v3 cameraDirection{.z = -1.0f};
+  v3 arbitraryCameraUp{.x = 0.0f, .y = 1.0f, .z = 0.0f};
 
   double lastTime = glfwGetTime();
 
@@ -224,16 +229,18 @@ int main() {
     lastTime = time;
 
     if (glfwGetKey(window, GLFW_KEY_A)) {
-      cameraPosition.x += dt * 10.0f;
+      cameraPosition = cameraPosition +
+                       cameraDirection.cross(arbitraryCameraUp) * dt * 10.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_D)) {
-      cameraPosition.x -= dt * 10.0f;
+      cameraPosition = cameraPosition -
+                       cameraDirection.cross(arbitraryCameraUp) * dt * 10.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_W)) {
-      cameraPosition.z += dt * 10.0f;
+      cameraPosition = cameraPosition + cameraDirection * dt * 10.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_S)) {
-      cameraPosition.z -= dt * 10.0f;
+      cameraPosition = cameraPosition - cameraDirection * dt * 10.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE)) {
       cameraPosition.y -= dt * 10.0f;
@@ -241,6 +248,33 @@ int main() {
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
       cameraPosition.y += dt * 10.0f;
     }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT)) {
+      cameraRotations.y = fmod((fmod(cameraRotations.y, 360.0f) + 2.f), 360.0f);
+      logzy::info("New yaw is: {}", cameraRotations.y);
+    }
+    if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
+      cameraRotations.y = fmod((fmod(cameraRotations.y, 360.0f) - 2.f), 360.0f);
+      logzy::info("New yaw is: {}", cameraRotations.y);
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP)) {
+      cameraRotations.x = std::max(cameraRotations.x - 1.0f, -90.0f);
+      logzy::info("New pitch is: {}", cameraRotations.x);
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN)) {
+      cameraRotations.x = std::min(cameraRotations.x + 1.0f, 90.0f);
+      logzy::info("New pitch is: {}", cameraRotations.x);
+    }
+
+    cameraDirection =
+        v3{
+            .x = cos(toRadians(cameraRotations.y)) *
+                 cos(toRadians(cameraRotations.x)),
+            .y = sin(toRadians(cameraRotations.x)),
+            .z = sin(toRadians(cameraRotations.y)) *
+                 cos(toRadians(cameraRotations.x)),
+        }
+            .normalize();
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -255,7 +289,8 @@ int main() {
     m = rotate(m, toRadians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
     m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
 
-    m4x4 v = lookAt(cameraPosition, cameraTarget, cameraUp, cameraRight);
+    m4x4 v = lookAt(cameraPosition, cameraPosition + cameraDirection,
+                    arbitraryCameraUp);
 
     auto p = perspective();
 

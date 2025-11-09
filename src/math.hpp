@@ -21,8 +21,24 @@ struct v3 {
     return v3{.x = x / length, .y = y / length, .z = z / length};
   }
 
+  [[nodiscard]] constexpr v3 cross(const v3 o) const {
+    return v3{
+        .x = y * o.z - z * o.y,
+        .y = z * o.x - x * o.z,
+        .z = x * o.y - y * o.x,
+    };
+  }
+
+  [[nodiscard]] constexpr v3 operator*(const float mult) const {
+    return v3{.x = mult * x, .y = mult * y, .z = mult * z};
+  }
+
   [[nodiscard]] constexpr v3 operator-(v3 other) const {
     return v3{.x = x - other.x, .y = y - other.y, .z = z - other.z};
+  }
+
+  [[nodiscard]] constexpr v3 operator+(v3 other) const {
+    return v3{.x = x + other.x, .y = y + other.y, .z = z + other.z};
   }
 };
 
@@ -210,10 +226,13 @@ struct m4x4 {
   return rotationMatrix * mat;
 }
 
-[[nodiscard]] constexpr m4x4 lookAt(v3 cameraPosition, v3 target, v3 up,
-                                    v3 right) {
+[[nodiscard]] constexpr m4x4 lookAt(v3 cameraPosition, v3 target,
+                                    v3 arbitraryUp) {
 
-  v3 direction = (cameraPosition - target).normalize();
+  v3 direction = (target - cameraPosition).normalize();
+
+  v3 right = direction.cross(arbitraryUp);
+  v3 up = right.cross(direction);
 
   m4x4 positionMatrix{
       .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
