@@ -9,6 +9,7 @@
 #include <string_view>
 #include <utility>
 
+#include "camera.hpp"
 #include "math.hpp"
 #include "program.hpp"
 #include "shader.hpp"
@@ -208,73 +209,63 @@ int main() {
                         nullptr);
   glVertexAttribDivisor(voffsetLocation, 1);
 
-  v3 cameraRotations{
-      .x = 0.0f,   // Pitch
-      .y = -90.0f, // yaw
-      .z = 0.0f,   // roll
-  };
+  constexpr v3 cameraInitialPosition{.z = 20.0f};
+  constexpr v3 cameraArbitraryUp{.y = 1.0F};
+  constexpr float cameraSpeed = 10.0F;
+  constexpr float horizontalSensitivity = 50.0f;
+  constexpr float verticalSensitivity = horizontalSensitivity / 2.0f;
 
-  v3 cameraPosition{.z = 20.0f};
-  v3 cameraDirection{.z = -1.0f};
-  v3 arbitraryCameraUp{.x = 0.0f, .y = 1.0f, .z = 0.0f};
+  Camera camera(cameraInitialPosition, cameraArbitraryUp);
 
   double lastTime = glfwGetTime();
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    double time = glfwGetTime();
+    double time = static_cast<float>(glfwGetTime());
 
-    double dt = lastTime - time;
+    float dt = lastTime - time;
     lastTime = time;
 
+    float cameraDistance = cameraSpeed * dt;
+    float cameraHorizontalRotation = horizontalSensitivity * dt;
+    float cameraVerticalRotation = verticalSensitivity * dt;
+
     if (glfwGetKey(window, GLFW_KEY_A)) {
-      cameraPosition = cameraPosition +
-                       cameraDirection.cross(arbitraryCameraUp) * dt * 10.0f;
+      camera.move(Camera::Direction::Left, cameraDistance);
     }
     if (glfwGetKey(window, GLFW_KEY_D)) {
-      cameraPosition = cameraPosition -
-                       cameraDirection.cross(arbitraryCameraUp) * dt * 10.0f;
+      camera.move(Camera::Direction::Right, cameraDistance);
     }
     if (glfwGetKey(window, GLFW_KEY_W)) {
-      cameraPosition = cameraPosition + cameraDirection * dt * 10.0f;
+      camera.move(Camera::Direction::Forward, cameraDistance);
     }
     if (glfwGetKey(window, GLFW_KEY_S)) {
-      cameraPosition = cameraPosition - cameraDirection * dt * 10.0f;
+      camera.move(Camera::Direction::Backward, cameraDistance);
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE)) {
-      cameraPosition.y -= dt * 10.0f;
+      camera.move(Camera::Direction::Up, cameraDistance);
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
-      cameraPosition.y += dt * 10.0f;
+      camera.move(Camera::Direction::Down, cameraDistance);
     }
 
     if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-      cameraRotations.y = fmod((fmod(cameraRotations.y, 360.0f) + 2.f), 360.0f);
-      logzy::info("New yaw is: {}", cameraRotations.y);
+      camera.rotate({.y = -cameraHorizontalRotation});
+      logzy::info("New yaw is: {}", camera.yaw);
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-      cameraRotations.y = fmod((fmod(cameraRotations.y, 360.0f) - 2.f), 360.0f);
-      logzy::info("New yaw is: {}", cameraRotations.y);
+      camera.rotate({.y = cameraHorizontalRotation});
+      logzy::info("New yaw is: {}", camera.yaw);
     }
     if (glfwGetKey(window, GLFW_KEY_UP)) {
-      cameraRotations.x = std::max(cameraRotations.x - 1.0f, -90.0f);
-      logzy::info("New pitch is: {}", cameraRotations.x);
+      camera.rotate({.x = cameraVerticalRotation});
+      logzy::info("New pitch is: {}", camera.pitch);
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN)) {
-      cameraRotations.x = std::min(cameraRotations.x + 1.0f, 90.0f);
-      logzy::info("New pitch is: {}", cameraRotations.x);
+      camera.rotate({.x = -cameraVerticalRotation});
+      logzy::info("New pitch is: {}", camera.pitch);
     }
-
-    cameraDirection =
-        v3{
-            .x = cos(toRadians(cameraRotations.y)) *
-                 cos(toRadians(cameraRotations.x)),
-            .y = sin(toRadians(cameraRotations.x)),
-            .z = sin(toRadians(cameraRotations.y)) *
-                 cos(toRadians(cameraRotations.x)),
-        }
-            .normalize();
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -286,12 +277,10 @@ int main() {
 
     m4x4 m = m4x4::identity(1.0f);
     // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
-    m = rotate(m, toRadians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
+    m = rotate(m, radians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
     m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
 
-    m4x4 v = lookAt(cameraPosition, cameraPosition + cameraDirection,
-                    arbitraryCameraUp);
-
+    m4x4 v = camera.getView();
     auto p = perspective();
 
     program.use();

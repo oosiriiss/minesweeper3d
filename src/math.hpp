@@ -92,7 +92,7 @@ struct m4x4 {
   }
 };
 
-[[nodiscard]] constexpr float toRadians(float degrees) {
+[[nodiscard]] constexpr float radians(float degrees) {
   return degrees * std::numbers::pi / 180.0F;
 }
 
@@ -113,7 +113,7 @@ struct m4x4 {
 
 [[nodiscard]] constexpr m4x4 perspective(float fov = 50.0F, float near = 0.1F,
                                          float far = 100.0F) {
-  float x = 1.0F / (toRadians(fov / 2.0F));
+  float x = 1.0F / (radians(fov / 2.0F));
 
   return m4x4{
       .data = {
