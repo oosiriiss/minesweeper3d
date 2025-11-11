@@ -5,10 +5,23 @@
 #include <math.h>
 #include <numbers>
 
-struct v2 {
-  float x = 0.0f;
-  float y = 0.0f;
+// TODO :: CastTo method that will cast vector to a vector of other numeric type
+// TODO :: Generic templated vector
+
+template <typename T> struct v2 {
+  T x;
+  T y;
+
+  [[nodiscard]] constexpr v2<T> operator-(const v2<T> other) const {
+    return v2<T>{
+        .x = x - other.x,
+        .y = y - other.y,
+    };
+  }
 };
+
+using v2f = v2<float>;
+using v2d = v2<double>;
 
 struct v3 {
   float x = 0.0f;
@@ -250,7 +263,7 @@ struct m4x4 {
   return rotationMatrix * positionMatrix;
 }
 
-template <> struct std::formatter<v2, char> {
+template <typename T> struct std::formatter<v2<T>, char> {
 
   template <class ParseContext>
   constexpr ParseContext::iterator parse(ParseContext &ctx) {
@@ -258,7 +271,7 @@ template <> struct std::formatter<v2, char> {
   }
 
   template <class FmtContext>
-  FmtContext::iterator format(v2 v, FmtContext &ctx) const {
+  FmtContext::iterator format(v2<T> v, FmtContext &ctx) const {
 
     return std::format_to(ctx.out(), "v2({},{})", v.x, v.y);
   }

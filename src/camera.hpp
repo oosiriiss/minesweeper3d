@@ -8,7 +8,6 @@ struct Camera {
       : position(initialPosition), up(arbitraryUp),
         right(direction.cross(arbitraryUp)), arbitraryUp(arbitraryUp) {
     updateDirection();
-    updateViewMatrix();
   }
 
   enum class Direction { Left, Right, Forward, Backward, Up, Down };
@@ -35,7 +34,22 @@ struct Camera {
   // World up vector
   v3 arbitraryUp{0.0F, 1.0F, 0.0F};
 
-  [[nodiscard]] constexpr m4x4 &getView() { return viewMatrix_; }
+  [[nodiscard]] constexpr m4x4 getView() {
+
+    m4x4 positionMatrix{.data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
+                                 std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
+                                 std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
+                                 std::array<float, 4>{-position.x, -position.y,
+                                                      -position.z, 1.0F}}};
+
+    m4x4 rotationMatrix{
+        .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
+                 std::array<float, 4>{right.y, up.y, direction.y, 0.0F},
+                 std::array<float, 4>{right.z, up.z, direction.z, 0.0F},
+                 std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+
+    return rotationMatrix * positionMatrix;
+  }
 
   /**
    * Moves the camera by the given delta position
@@ -62,8 +76,6 @@ struct Camera {
       position = position + arbitraryUp * distance;
       break;
     }
-
-    updateViewMatrix();
   }
   /**
    * Rotates the camera along each axis by given degrees.
@@ -72,22 +84,19 @@ struct Camera {
 
     constexpr auto MAX_PITCH = 89.9F;
     constexpr auto MIN_PITCH = -89.9F;
-    constexpr auto MAX_YAW = 360.0F;
-    constexpr auto MAX_ROLL = 360.0F;
+    // constexpr auto MAX_YAW = 360.0F;
+    // constexpr auto MAX_ROLL = 360.0F;
 
     pitch = std::min(std::max(MIN_PITCH, pitch + rotations.x), MAX_PITCH);
-    yaw = fmod((yaw + rotations.y), MAX_YAW);
-    roll = fmod((roll + rotations.z), MAX_ROLL);
+    yaw += rotations.y;
+    roll += rotations.z;
+    // yaw = fmod((yaw + rotations.y), MAX_YAW);
+    // roll = fmod((roll + rotations.z), MAX_ROLL);
 
     updateDirection();
-    updateViewMatrix();
   }
 
 private:
-  // Actual view matrix of the camera. It gets automatically updated.
-  // This field is exposed as public for readonly.
-  m4x4 viewMatrix_;
-
   constexpr void updateDirection() {
     direction.x = cos(radians(yaw)) * cos(radians(pitch));
     direction.y = sin(radians(pitch));
@@ -95,24 +104,7 @@ private:
 
     direction = direction.normalize();
 
-    up = right.cross(direction);
-    right = direction.cross(up);
-  }
-
-  constexpr void updateViewMatrix() {
-
-    m4x4 positionMatrix{.data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
-                                 std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
-                                 std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
-                                 std::array<float, 4>{-position.x, -position.y,
-                                                      -position.z, 1.0F}}};
-
-    m4x4 rotationMatrix{
-        .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
-                 std::array<float, 4>{right.y, up.y, direction.y, 0.0F},
-                 std::array<float, 4>{right.z, up.z, direction.z, 0.0F},
-                 std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
-
-    viewMatrix_ = rotationMatrix * positionMatrix;
+    right = direction.cross(arbitraryUp).normalize();
+    up = right.cross(direction).normalize();
   }
 };

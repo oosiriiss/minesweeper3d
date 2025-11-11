@@ -129,6 +129,8 @@ int main() {
   glfwSetErrorCallback(errorCallback);
   glfwSetKeyCallback(window, keyCallback);
 
+  glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
   // Creating openGL context
   glfwMakeContextCurrent(window);
   gladLoadGL(glfwGetProcAddress);
@@ -141,7 +143,6 @@ int main() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   // Generating cube offsets
-
   constexpr v3 dim{.x = 10, .y = 10, .z = 10};
   constexpr std::size_t cubesTotal =
       static_cast<std::size_t>(dim.x * dim.y * dim.z);
@@ -212,10 +213,13 @@ int main() {
   constexpr v3 cameraInitialPosition{.z = 20.0f};
   constexpr v3 cameraArbitraryUp{.y = 1.0F};
   constexpr float cameraSpeed = 10.0F;
-  constexpr float horizontalSensitivity = 50.0f;
-  constexpr float verticalSensitivity = horizontalSensitivity / 2.0f;
+  constexpr float horizontalSensitivity = 0.8f;
+  constexpr float verticalSensitivity = horizontalSensitivity / 1.5f;
 
   Camera camera(cameraInitialPosition, cameraArbitraryUp);
+
+  v2d mousePos;
+  glfwGetCursorPos(window, &mousePos.x, &mousePos.y);
 
   double lastTime = glfwGetTime();
 
@@ -224,12 +228,24 @@ int main() {
 
     double time = static_cast<float>(glfwGetTime());
 
+    // Handling mouse movement
+    v2d newMousePos;
+    glfwGetCursorPos(window, &newMousePos.x, &newMousePos.y);
+    v2d mouseDelta = newMousePos - mousePos;
+
+    // TODO :: Investigate why does yaw have to be negated in order to rotate in
+    // the right direction
+    camera.rotate(
+        {.x = static_cast<float>(mouseDelta.y * horizontalSensitivity),
+         .y = static_cast<float>(-mouseDelta.x * verticalSensitivity),
+         .z = 0.0f});
+
+    mousePos = newMousePos;
+
     float dt = lastTime - time;
     lastTime = time;
 
     float cameraDistance = cameraSpeed * dt;
-    float cameraHorizontalRotation = horizontalSensitivity * dt;
-    float cameraVerticalRotation = verticalSensitivity * dt;
 
     if (glfwGetKey(window, GLFW_KEY_A)) {
       camera.move(Camera::Direction::Left, cameraDistance);
@@ -250,23 +266,6 @@ int main() {
       camera.move(Camera::Direction::Down, cameraDistance);
     }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT)) {
-      camera.rotate({.y = -cameraHorizontalRotation});
-      logzy::info("New yaw is: {}", camera.yaw);
-    }
-    if (glfwGetKey(window, GLFW_KEY_RIGHT)) {
-      camera.rotate({.y = cameraHorizontalRotation});
-      logzy::info("New yaw is: {}", camera.yaw);
-    }
-    if (glfwGetKey(window, GLFW_KEY_UP)) {
-      camera.rotate({.x = cameraVerticalRotation});
-      logzy::info("New pitch is: {}", camera.pitch);
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN)) {
-      camera.rotate({.x = -cameraVerticalRotation});
-      logzy::info("New pitch is: {}", camera.pitch);
-    }
-
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
@@ -280,7 +279,7 @@ int main() {
     m = rotate(m, radians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
     m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
 
-    m4x4 v = camera.getView();
+    const m4x4 &v = camera.getView();
     auto p = perspective();
 
     program.use();
