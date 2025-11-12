@@ -5,59 +5,11 @@
 #include <math.h>
 #include <numbers>
 
-// TODO :: CastTo method that will cast vector to a vector of other numeric type
-// TODO :: Generic templated vector
-
-template <typename T> struct v2 {
-  T x;
-  T y;
-
-  [[nodiscard]] constexpr v2<T> operator-(const v2<T> other) const {
-    return v2<T>{
-        .x = x - other.x,
-        .y = y - other.y,
-    };
-  }
-};
-
-using v2f = v2<float>;
-using v2d = v2<double>;
-
-struct v3 {
-  float x = 0.0f;
-  float y = 0.0f;
-  float z = 0.0f;
-
-  [[nodiscard]] constexpr v3 normalize() const {
-    const float length = sqrt(x * x + y * y + z * z);
-
-    return v3{.x = x / length, .y = y / length, .z = z / length};
-  }
-
-  [[nodiscard]] constexpr v3 cross(const v3 o) const {
-    return v3{
-        .x = y * o.z - z * o.y,
-        .y = z * o.x - x * o.z,
-        .z = x * o.y - y * o.x,
-    };
-  }
-
-  [[nodiscard]] constexpr v3 operator*(const float mult) const {
-    return v3{.x = mult * x, .y = mult * y, .z = mult * z};
-  }
-
-  [[nodiscard]] constexpr v3 operator-(v3 other) const {
-    return v3{.x = x - other.x, .y = y - other.y, .z = z - other.z};
-  }
-
-  [[nodiscard]] constexpr v3 operator+(v3 other) const {
-    return v3{.x = x + other.x, .y = y + other.y, .z = z + other.z};
-  }
-};
+#include "matrix.hpp"
 
 struct Vertex {
-  v3 position;
-  v3 color;
+  v3f position;
+  v3f color;
 };
 
 struct m4x4 {
@@ -136,7 +88,7 @@ struct m4x4 {
           std::array<float, 4>{0.0F, 0.0F, -far * near / (far - near), 0.0F}}};
 }
 
-[[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, v3 vector) {
+[[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, v3f vector) {
 
   m4x4 translationMatrix = {
       .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
@@ -239,20 +191,20 @@ struct m4x4 {
   return rotationMatrix * mat;
 }
 
-[[nodiscard]] constexpr m4x4 lookAt(v3 cameraPosition, v3 target,
-                                    v3 arbitraryUp) {
+[[nodiscard]] constexpr m4x4 lookAt(v3f cameraPosition, v3f target,
+                                    v3f arbitraryUp) {
 
-  v3 direction = (target - cameraPosition).normalize();
+  v3f direction = normalize(target - cameraPosition);
 
-  v3 right = direction.cross(arbitraryUp);
-  v3 up = right.cross(direction);
+  v3f right = cross(direction, arbitraryUp);
+  v3f up = cross(right, direction);
 
   m4x4 positionMatrix{
       .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
                std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
-               std::array<float, 4>{-cameraPosition.x, -cameraPosition.y,
-                                    -cameraPosition.z, 1.0F}}};
+               std::array<float, 4>{-cameraPosition.x(), -cameraPosition.y(),
+                                    -cameraPosition.z(), 1.0F}}};
 
   m4x4 rotationMatrix{
       .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
@@ -262,46 +214,3 @@ struct m4x4 {
 
   return rotationMatrix * positionMatrix;
 }
-
-template <typename T> struct std::formatter<v2<T>, char> {
-
-  template <class ParseContext>
-  constexpr ParseContext::iterator parse(ParseContext &ctx) {
-    return ctx.begin();
-  }
-
-  template <class FmtContext>
-  FmtContext::iterator format(v2<T> v, FmtContext &ctx) const {
-
-    return std::format_to(ctx.out(), "v2({},{})", v.x, v.y);
-  }
-};
-
-template <> struct std::formatter<v3, char> {
-
-  template <class ParseContext>
-  constexpr ParseContext::iterator parse(ParseContext &ctx) {
-    return ctx.begin();
-  }
-
-  template <class FmtContext>
-  FmtContext::iterator format(v3 v, FmtContext &ctx) const {
-
-    return std::format_to(ctx.out(), "v3({},{},{})", v.x, v.y, v.z);
-  }
-};
-
-template <> struct std::formatter<m4x4, char> {
-
-  template <class ParseContext>
-  constexpr ParseContext::iterator parse(ParseContext &ctx) {
-    return ctx.begin();
-  }
-
-  template <class FmtContext>
-  FmtContext::iterator format(m4x4 m, FmtContext &ctx) const {
-
-    return std::format_to(ctx.out(), "m4x4 (Column-major) (\n{}\n{}\n{}\n{})\n",
-                          m.data[0], m.data[1], m.data[2], m.data[3]);
-  }
-};
