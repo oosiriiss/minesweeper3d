@@ -94,7 +94,7 @@ bool Program::setBool(const std::string &name, bool value) {
   return true;
 }
 
-bool Program::setM4x4(const std::string &name, const m4x4 &matrix) {
+bool Program::setM4x4(const std::string &name, const m4x4f &matrix) {
 
   auto locOpt = getUniformLocation(name);
   if (!locOpt) {
@@ -103,8 +103,7 @@ bool Program::setM4x4(const std::string &name, const m4x4 &matrix) {
 
   GLsizei count = 1;
   GLboolean transpose = GL_FALSE;
-  glUniformMatrix4fv(*locOpt, count, transpose,
-                     static_cast<const GLfloat *>(matrix.dataPtr()));
+  glUniformMatrix4fv(*locOpt, count, transpose, dataAs<GLfloat>(matrix));
 
   return true;
 }

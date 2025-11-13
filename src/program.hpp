@@ -1,6 +1,6 @@
 #pragma once
 #include "glad.h"
-#include "math.hpp"
+#include "matrix.hpp"
 #include "shader.hpp"
 #include <vector>
 
@@ -16,5 +16,5 @@ struct Program {
   std::optional<GLint> getAttribLocation(const std::string &name) const;
 
   bool setBool(const std::string &name, bool value);
-  bool setM4x4(const std::string &name, const m4x4 &value);
+  bool setM4x4(const std::string &name, const m4x4f &value);
 };

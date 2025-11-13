@@ -17,7 +17,7 @@ struct Camera {
   // Rotation around X axis (up-down) in degrees.
   float pitch = 0.0F;
   // Rotation around Y axis (left-right) in degrees.
-  float yaw = -90.0F;
+  float yaw = 90.0F;
   // Rotation around Z axis (rolling left-right) in degrees.
   float roll = 0.0F;
 
@@ -36,16 +36,16 @@ struct Camera {
   // World up vector
   v3f arbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
 
-  [[nodiscard]] constexpr m4x4 getView() {
+  [[nodiscard]] constexpr m4x4f getView() {
 
-    m4x4 positionMatrix{
+    m4x4f positionMatrix{
         .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
                  std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
                  std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
                  std::array<float, 4>{-position.x(), -position.y(),
                                       -position.z(), 1.0F}}};
 
-    m4x4 rotationMatrix{
+    m4x4f rotationMatrix{
         .data = {std::array<float, 4>{right.x(), up.x(), direction.x(), 0.0F},
                  std::array<float, 4>{right.y(), up.y(), direction.y(), 0.0F},
                  std::array<float, 4>{right.z(), up.z(), direction.z(), 0.0F},
@@ -107,12 +107,7 @@ private:
 
     direction = normalize(direction);
 
-    logzy::info("Direction: {} ", direction);
-    logzy::info("iarbitrary up: {} ", arbitraryUp);
-
     right = normalize(cross(direction, arbitraryUp));
-
-    logzy::warn("Right: {}", right);
 
     up = normalize(cross(right, direction));
   }

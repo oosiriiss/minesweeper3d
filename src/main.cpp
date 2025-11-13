@@ -226,9 +226,6 @@ int main() {
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    logzy::debug("Camera: \nposition: {}\n direction: {}", camera.position,
-                 camera.direction);
-
     double time = static_cast<float>(glfwGetTime());
 
     // Handling mouse movement
@@ -278,13 +275,13 @@ int main() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m4x4 m = m4x4::identity(1.0f);
+    m4x4f m = identity<float, 4>();
     // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
     m = rotate(m, radians(50.0F * static_cast<float>(time)),
                vec3<float>(0.0F, 1.0F, 0.0F));
     m = scale(m, vec3<float>(0.1F, 0.1F, 0.1F));
 
-    const m4x4 &v = camera.getView();
+    const m4x4f &v = camera.getView();
     auto p = perspective();
 
     program.use();

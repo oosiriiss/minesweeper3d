@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <concepts>
 #include <math.h>
 #include <numeric>
 #include <string>
@@ -12,14 +13,15 @@
 // TODO :: iterator for matrix
 // TODO :: Maybe separate the vector template class from mat template
 
-template <class T>
-concept Arithmetic = requires(const T a, const T b) {
-  a + b;
-  a - b;
-  a * b;
-  a / b;
+template <typename T>
+concept Arithmetic = requires(T a, T b) {
+  { a + b } -> std::same_as<T>;
+  //{ a - b } -> std::same_as<T>;
+  //{ a * b } -> std::same_as<T>;
+  //{ a / b } -> std::same_as<T>;
 };
 
+// Row major matrix
 template <Arithmetic T, std::size_t Rows, std::size_t Cols> struct mat {
   std::array<std::array<T, Cols>, Rows> data{};
 };
@@ -41,6 +43,7 @@ template <Arithmetic T, std::size_t Size>
   return diagonal<T, Size>(static_cast<T>(1));
 }
 
+using m4x4f = mat<float, 4, 4>;
 using v2f = mat<float, 1, 2>;
 using v2d = mat<double, 1, 2>;
 using v3f = mat<float, 1, 3>;
@@ -175,16 +178,20 @@ template <class T>
 [[nodiscard]] constexpr mat<T, 1, 3> cross(const mat<T, 1, 3> &first,
                                            const mat<T, 1, 3> &second) {
 
-  logzy::info("First: {}\nSecond:{}", first, second);
-
-  logzy::info(" f x = {} y = {} z = {}", first.x(), first.y(), first.z());
-  logzy::info(" s x = {} y = {} z = {}", second.x(), second.y(), second.z());
-
   return mat<T, 1, 3>{
       .data = {{first.y() * second.z() - first.z() * second.y(),
                 first.z() * second.x() - first.x() * second.z(),
                 first.x() * second.y() - first.y() * second.x()}}};
 }
+
+template <class Out, class T, std::size_t Rows, std::size_t Cols>
+[[nodiscard]] constexpr const Out *dataAs(const mat<T, Rows, Cols> &m) {
+  return static_cast<const Out *>(&(m.data[0][0]));
+}
+
+//////////////////////
+//// Formatters //////
+//////////////////////
 
 #include <format>
 
