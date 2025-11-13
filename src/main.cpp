@@ -11,6 +11,7 @@
 
 #include "camera.hpp"
 #include "math.hpp"
+#include "matrix.hpp"
 #include "program.hpp"
 #include "shader.hpp"
 
@@ -106,7 +107,6 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 int main() {
-
   // Initializing glfw
 
   if (!glfwInit()) {
@@ -143,19 +143,19 @@ int main() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   // Generating cube offsets
-  constexpr v3 dim{.x = 10, .y = 10, .z = 10};
+  constexpr v3f dim = vec3<float>(10.0F, 10.0F, 10.0F);
   constexpr std::size_t cubesTotal =
-      static_cast<std::size_t>(dim.x * dim.y * dim.z);
+      static_cast<std::size_t>(dim.x() * dim.y() * dim.z());
 
-  std::array<v3, cubesTotal> cubes{};
+  std::array<v3f, cubesTotal> cubes{};
 
   float spacing = 3.0f;
 
-  for (int x = 0; x < dim.x; ++x) {
-    for (int y = 0; y < dim.y; ++y) {
-      for (int z = 0; z < dim.z; ++z) {
+  for (int x = 0; x < dim.x(); ++x) {
+    for (int y = 0; y < dim.y(); ++y) {
+      for (int z = 0; z < dim.z(); ++z) {
         cubes[x * 100 + y * 10 + z] =
-            v3{.x = spacing * x, .y = spacing * y, .z = spacing * z};
+            vec3<float>(spacing * x, spacing * y, spacing * z);
       }
     }
   }
@@ -206,12 +206,12 @@ int main() {
 
   glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
   glEnableVertexAttribArray(voffsetLocation);
-  glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE, sizeof(v3),
+  glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE, sizeof(v3f),
                         nullptr);
   glVertexAttribDivisor(voffsetLocation, 1);
 
-  constexpr v3 cameraInitialPosition{.z = 20.0f};
-  constexpr v3 cameraArbitraryUp{.y = 1.0F};
+  constexpr v3f cameraInitialPosition = vec3<float>(.0F, .0F, 20.0F);
+  constexpr v3f cameraArbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
   constexpr float cameraSpeed = 10.0F;
   constexpr float horizontalSensitivity = 0.8f;
   constexpr float verticalSensitivity = horizontalSensitivity / 1.5f;
@@ -219,26 +219,30 @@ int main() {
   Camera camera(cameraInitialPosition, cameraArbitraryUp);
 
   v2d mousePos;
-  glfwGetCursorPos(window, &mousePos.x, &mousePos.y);
+  glfwGetCursorPos(window, &(mousePos.data[0][0]), &(mousePos.data[0][1]));
 
   double lastTime = glfwGetTime();
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
+    logzy::debug("Camera: \nposition: {}\n direction: {}", camera.position,
+                 camera.direction);
+
     double time = static_cast<float>(glfwGetTime());
 
     // Handling mouse movement
     v2d newMousePos;
-    glfwGetCursorPos(window, &newMousePos.x, &newMousePos.y);
+    glfwGetCursorPos(window, &(newMousePos.data[0][0]),
+                     &(newMousePos.data[0][1]));
     v2d mouseDelta = newMousePos - mousePos;
 
     // TODO :: Investigate why does yaw have to be negated in order to rotate in
     // the right direction
-    camera.rotate(
-        {.x = static_cast<float>(mouseDelta.y * horizontalSensitivity),
-         .y = static_cast<float>(-mouseDelta.x * verticalSensitivity),
-         .z = 0.0f});
+    camera.rotate(vec3<float>(
+        static_cast<float>(mouseDelta.data[0][1]) * horizontalSensitivity,
+        static_cast<float>(-mouseDelta.data[0][0]) * verticalSensitivity,
+        0.0F));
 
     mousePos = newMousePos;
 
@@ -276,8 +280,9 @@ int main() {
 
     m4x4 m = m4x4::identity(1.0f);
     // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
-    m = rotate(m, radians(50.0F * static_cast<float>(time)), v3{.y = 1.0f});
-    m = scale(m, v3{.x = 0.1f, .y = 0.1f, .z = 0.1f});
+    m = rotate(m, radians(50.0F * static_cast<float>(time)),
+               vec3<float>(0.0F, 1.0F, 0.0F));
+    m = scale(m, vec3<float>(0.1F, 0.1F, 0.1F));
 
     const m4x4 &v = camera.getView();
     auto p = perspective();

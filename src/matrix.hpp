@@ -3,12 +3,14 @@
 #include <array>
 #include <math.h>
 #include <numeric>
+#include <string>
 
 // TODO :: CastTo method that will cast vector to a vector of other numeric type
 // TODO :: Generic templated vector
 // TODO :: Allow multiplication of matrice with different sizes
 // TODO :: std::formatter for new matrix type
 // TODO :: iterator for matrix
+// TODO :: Maybe separate the vector template class from mat template
 
 template <class T>
 concept Arithmetic = requires(const T a, const T b) {
@@ -19,45 +21,83 @@ concept Arithmetic = requires(const T a, const T b) {
 };
 
 template <Arithmetic T, std::size_t Rows, std::size_t Cols> struct mat {
-
-  std::array<std::array<T, Cols>, Rows> data;
-
-  [[nodiscard]] constexpr mat<T, Rows, Cols>
-  operator*(const mat<T, Rows, Cols> &other) {
-
-    mat<T, Rows, Cols> out;
-    out[0][0] = other.data[0][0];
-    out[1][0] = data[0][0];
-    return out;
-  }
+  std::array<std::array<T, Cols>, Rows> data{};
 };
+
+template <Arithmetic T, std::size_t Size>
+[[nodiscard]] constexpr mat<T, Size, Size> diagonal(T value) {
+
+  mat<T, Size, Size> out;
+
+  for (std::size_t i = 0; i < Size; ++i) {
+    out.data[i][i] = value;
+  }
+
+  return out;
+}
+
+template <Arithmetic T, std::size_t Size>
+[[nodiscard]] constexpr mat<T, Size, Size> identity() {
+  return diagonal<T, Size>(static_cast<T>(1));
+}
 
 using v2f = mat<float, 1, 2>;
 using v2d = mat<double, 1, 2>;
 using v3f = mat<float, 1, 3>;
 
+template <Arithmetic T> constexpr mat<T, 1, 2> vec2(T x, T y, T z) {
+  return mat<T, 1, 2>{.data = {{x, y}}};
+}
+
+template <Arithmetic T> mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
+  return mat<T, 1, 3>{.data = {{x, y, z}}};
+}
+
 template <Arithmetic T> struct mat<T, 1, 3> {
-  std::array<std::array<T, 3>, 1> data;
-  [[nodiscard]] constexpr T &x() { return data[0]; }
+  std::array<std::array<T, 3>, 1> data{};
+  [[nodiscard]] constexpr T &x() { return data[0][0]; }
   [[nodiscard]] constexpr const T &x() const { return data[0][0]; }
 
-  [[nodiscard]] constexpr T &y() { return data[1]; }
-  [[nodiscard]] constexpr const T &y() const { return data[0][0]; }
+  [[nodiscard]] constexpr T &y() { return data[0][1]; }
+  [[nodiscard]] constexpr const T &y() const { return data[0][1]; }
 
-  [[nodiscard]] constexpr T &z() { return data[2]; }
-  [[nodiscard]] constexpr const T &z() const { return data[0][0]; }
+  [[nodiscard]] constexpr T &z() { return data[0][2]; }
+  [[nodiscard]] constexpr const T &z() const { return data[0][2]; }
 };
+
+// Transposition
+template <Arithmetic T, std::size_t Rows, std::size_t Cols>
+[[nodiscard]] constexpr mat<T, Cols, Rows>
+transpose(const mat<T, Rows, Cols> &m) {
+  mat<T, Cols, Rows> out;
+
+  for (std::size_t i = 0; i < Rows; ++i) {
+    for (std::size_t j = 0; j < Cols; ++j) {
+      out.data[j][i] = m[i][j];
+    }
+  }
+
+  return out;
+}
 
 // Matrix multiplication
 template <class T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator*(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
-
-  // TODO ::
+  // TODO :: Finish this
 
   mat<T, Rows, Cols> out;
-  out.data[0][0] = f.data[0][0];
-  out.data[1][0] = s.data[0][0];
+
+  for (int i = 0; i < f.data.size(); ++i) {
+    for (int j = 0; j < f.data[i].size(); ++j) {
+      float sum = 0;
+      for (int k = 0; k < f.data.size(); ++k) {
+        sum += f.data[k][i] * s.data[j][k];
+      }
+      out.data[j][i] = sum;
+    }
+  }
+
   return out;
 }
 
@@ -69,7 +109,7 @@ operator*(const mat<T, Rows, Cols> &f, const Multiplier mult) {
 
   for (std::size_t i = 0; i < f.data.size(); ++i) {
     for (std::size_t j = 0; j < f.data[i].size(); ++j) {
-      out[i][j] = f.data[i][j] * mult;
+      out.data[i][j] = f.data[i][j] * mult;
     }
   }
 
@@ -116,15 +156,15 @@ operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
 template <class T, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, 1, Cols> normalize(const mat<T, 1, Cols> &vec) {
 
-  const float squareSum =
-      std::accumulate(vec.data[0].begin(), vec.data[0].end(), 0,
+  const T squareSum =
+      std::accumulate(vec.data[0].begin(), vec.data[0].end(), static_cast<T>(0),
                       [](T sum, T number) { return sum + (number * number); });
 
-  const float length = sqrt(squareSum);
+  const T length = sqrt(squareSum);
 
   mat<T, 1, Cols> out;
 
-  for (std::size_t i = 0; i < out.data.size(); ++i) {
+  for (std::size_t i = 0; i < out.data[0].size(); ++i) {
     out.data[0][i] = vec.data[0][i] / length;
   }
 
@@ -134,14 +174,49 @@ template <class T, std::size_t Cols>
 template <class T>
 [[nodiscard]] constexpr mat<T, 1, 3> cross(const mat<T, 1, 3> &first,
                                            const mat<T, 1, 3> &second) {
-  mat<T, 1, 3> out;
 
-  out.x() = first.y() * second.z() - first.z() * second.y();
-  out.y() = first.z() * second.x() - first.x() * second.z();
-  out.z() = first.x() * second.y() - first.y() * second.x();
+  logzy::info("First: {}\nSecond:{}", first, second);
 
-  return out;
+  logzy::info(" f x = {} y = {} z = {}", first.x(), first.y(), first.z());
+  logzy::info(" s x = {} y = {} z = {}", second.x(), second.y(), second.z());
+
+  return mat<T, 1, 3>{
+      .data = {{first.y() * second.z() - first.z() * second.y(),
+                first.z() * second.x() - first.x() * second.z(),
+                first.x() * second.y() - first.y() * second.x()}}};
 }
+
+#include <format>
+
+template <typename T, std::size_t Rows, std::size_t Cols>
+struct std::formatter<mat<T, Rows, Cols>, char> {
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(mat<T, Rows, Cols> v, FmtContext &ctx) const {
+
+    // TODO :: Maybe this could be done better
+    std::string out;
+
+    out.push_back('[');
+    for (const auto &row : v.data) {
+      out.push_back('[');
+      for (const auto &cell : row) {
+        out += std::to_string(cell);
+        out.push_back(',');
+      }
+      out.push_back(']');
+    };
+    out.push_back(']');
+
+    return std::format_to(ctx.out(), "mat<Rows={},Cols={}>({})", Rows, Cols,
+                          out);
+  }
+};
 
 // template <typename T> struct std::formatter<v2<T>, char> {
 //

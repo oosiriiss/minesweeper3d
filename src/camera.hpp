@@ -1,12 +1,14 @@
 #pragma once
 
 #include "math.hpp"
+#include "matrix.hpp"
+#include <logzy/logzy.hpp>
 
 struct Camera {
 
-  constexpr Camera(v3 initialPosition, v3 arbitraryUp)
+  constexpr Camera(v3f initialPosition, v3f arbitraryUp)
       : position(initialPosition), up(arbitraryUp),
-        right(direction.cross(arbitraryUp)), arbitraryUp(arbitraryUp) {
+        right(cross(direction, arbitraryUp)), arbitraryUp(arbitraryUp) {
     updateDirection();
   }
 
@@ -20,32 +22,33 @@ struct Camera {
   float roll = 0.0F;
 
   // Camera world position
-  v3 position{0.0F, 0.0F, 0.0F};
+  v3f position = vec3<float>(0.0F, 0.0F, 0.0F);
 
   // Direction the camera is looking at
-  v3 direction{0.0F, 0.0F, -1.0F};
+  v3f direction = vec3<float>(0.0F, 0.0F, -1.0F);
 
   // camera up vector
-  v3 up{0.0F, 1.0F, 0.0F};
+  v3f up = vec3<float>(0.0F, 1.0F, 0.0F);
 
   // camera up vector
-  v3 right{1.0F, 0.0F, 0.0F};
+  v3f right = vec3<float>(1.0F, 0.0F, 0.0F);
 
   // World up vector
-  v3 arbitraryUp{0.0F, 1.0F, 0.0F};
+  v3f arbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
 
   [[nodiscard]] constexpr m4x4 getView() {
 
-    m4x4 positionMatrix{.data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
-                                 std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
-                                 std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
-                                 std::array<float, 4>{-position.x, -position.y,
-                                                      -position.z, 1.0F}}};
+    m4x4 positionMatrix{
+        .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
+                 std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
+                 std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
+                 std::array<float, 4>{-position.x(), -position.y(),
+                                      -position.z(), 1.0F}}};
 
     m4x4 rotationMatrix{
-        .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
-                 std::array<float, 4>{right.y, up.y, direction.y, 0.0F},
-                 std::array<float, 4>{right.z, up.z, direction.z, 0.0F},
+        .data = {std::array<float, 4>{right.x(), up.x(), direction.x(), 0.0F},
+                 std::array<float, 4>{right.y(), up.y(), direction.y(), 0.0F},
+                 std::array<float, 4>{right.z(), up.z(), direction.z(), 0.0F},
                  std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
     return rotationMatrix * positionMatrix;
@@ -80,16 +83,16 @@ struct Camera {
   /**
    * Rotates the camera along each axis by given degrees.
    */
-  void rotate(v3 rotations) {
+  void rotate(v3f rotations) {
 
     constexpr auto MAX_PITCH = 89.9F;
     constexpr auto MIN_PITCH = -89.9F;
     // constexpr auto MAX_YAW = 360.0F;
     // constexpr auto MAX_ROLL = 360.0F;
 
-    pitch = std::min(std::max(MIN_PITCH, pitch + rotations.x), MAX_PITCH);
-    yaw += rotations.y;
-    roll += rotations.z;
+    pitch = std::min(std::max(MIN_PITCH, pitch + rotations.x()), MAX_PITCH);
+    yaw += rotations.y();
+    roll += rotations.z();
     // yaw = fmod((yaw + rotations.y), MAX_YAW);
     // roll = fmod((roll + rotations.z), MAX_ROLL);
 
@@ -98,13 +101,19 @@ struct Camera {
 
 private:
   constexpr void updateDirection() {
-    direction.x = cos(radians(yaw)) * cos(radians(pitch));
-    direction.y = sin(radians(pitch));
-    direction.z = sin(radians(yaw)) * cos(radians(pitch));
+    direction.x() = cos(radians(yaw)) * cos(radians(pitch));
+    direction.y() = sin(radians(pitch));
+    direction.z() = sin(radians(yaw)) * cos(radians(pitch));
 
-    direction = direction.normalize();
+    direction = normalize(direction);
 
-    right = direction.cross(arbitraryUp).normalize();
-    up = right.cross(direction).normalize();
+    logzy::info("Direction: {} ", direction);
+    logzy::info("iarbitrary up: {} ", arbitraryUp);
+
+    right = normalize(cross(direction, arbitraryUp));
+
+    logzy::warn("Right: {}", right);
+
+    up = normalize(cross(right, direction));
   }
 };

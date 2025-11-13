@@ -88,23 +88,24 @@ struct m4x4 {
           std::array<float, 4>{0.0F, 0.0F, -far * near / (far - near), 0.0F}}};
 }
 
-[[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, v3f vector) {
+[[nodiscard]] constexpr m4x4 translate(const m4x4 &mat, const v3f vector) {
 
   m4x4 translationMatrix = {
       .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
                std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
-               std::array<float, 4>{vector.x, vector.y, vector.z, 1.0F}}};
+               std::array<float, 4>{vector.x(), vector.y(), vector.z(), 1.0F}}};
 
   return translationMatrix * mat;
 }
 
-[[nodiscard]] constexpr m4x4 scale(const m4x4 &mat, v3 vector) {
+[[nodiscard]] constexpr m4x4 scale(const m4x4 &mat, const v3f vector) {
 
-  m4x4 scaleMatrix = {.data = {std::array<float, 4>{vector.x, 0.0F, 0.0F, 0.0F},
-                               std::array<float, 4>{0.0F, vector.y, 0.0F, 0.0F},
-                               std::array<float, 4>{0.0F, 0.0F, vector.z, 0.0F},
-                               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
+  m4x4 scaleMatrix = {
+      .data = {std::array<float, 4>{vector.x(), 0.0F, 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, vector.y(), 0.0F, 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, vector.z(), 0.0F},
+               std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
   return scaleMatrix * mat;
 }
@@ -152,17 +153,17 @@ struct m4x4 {
 /**
  * Column-major rotation amtrix around axis {axis}
  */
-[[nodiscard]] constexpr m4x4 rotate(const m4x4 &mat, float radians, v3 axis) {
+[[nodiscard]] constexpr m4x4 rotate(const m4x4 &mat, float radians, v3f axis) {
 
   const float c = cos(radians);
   const float s = sin(radians);
   const float ic = 1.0F - c;
 
-  const v3 normalized = axis.normalize();
+  const v3f normalized = normalize(axis);
 
-  const float x = normalized.x;
-  const float y = normalized.y;
-  const float z = normalized.z;
+  const float x = normalized.x();
+  const float y = normalized.y();
+  const float z = normalized.z();
 
   m4x4 rotationMatrix{.data = {std::array<float, 4>{                    //
                                                     c + x * x * ic,     //
@@ -191,8 +192,8 @@ struct m4x4 {
   return rotationMatrix * mat;
 }
 
-[[nodiscard]] constexpr m4x4 lookAt(v3f cameraPosition, v3f target,
-                                    v3f arbitraryUp) {
+[[nodiscard]] constexpr m4x4 lookAt(const v3f cameraPosition, const v3f target,
+                                    const v3f arbitraryUp) {
 
   v3f direction = normalize(target - cameraPosition);
 
@@ -207,9 +208,9 @@ struct m4x4 {
                                     -cameraPosition.z(), 1.0F}}};
 
   m4x4 rotationMatrix{
-      .data = {std::array<float, 4>{right.x, up.x, direction.x, 0.0F},
-               std::array<float, 4>{right.y, up.y, direction.y, 0.0F},
-               std::array<float, 4>{right.z, up.z, direction.z, 0.0F},
+      .data = {std::array<float, 4>{right.x(), up.x(), direction.x(), 0.0F},
+               std::array<float, 4>{right.y(), up.y(), direction.y(), 0.0F},
+               std::array<float, 4>{right.z(), up.z(), direction.z(), 0.0F},
                std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
 
   return rotationMatrix * positionMatrix;
