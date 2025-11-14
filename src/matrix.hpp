@@ -2,29 +2,53 @@
 
 #include <array>
 #include <concepts>
+#include <logzy/logzy.hpp>
 #include <math.h>
 #include <numeric>
 #include <string>
 
-// TODO :: CastTo method that will cast vector to a vector of other numeric type
-// TODO :: Generic templated vector
+// TODO :: MAtrix is row major but multiplication is done as column major
 // TODO :: Allow multiplication of matrice with different sizes
-// TODO :: std::formatter for new matrix type
 // TODO :: iterator for matrix
 // TODO :: Maybe separate the vector template class from mat template
 
 template <typename T>
 concept Arithmetic = requires(T a, T b) {
   { a + b } -> std::same_as<T>;
-  //{ a - b } -> std::same_as<T>;
-  //{ a * b } -> std::same_as<T>;
-  //{ a / b } -> std::same_as<T>;
+  { a - b } -> std::same_as<T>;
+  { a / b } -> std::same_as<T>;
+  { a * b } -> std::same_as<T>;
 };
 
-// Row major matrix
 template <Arithmetic T, std::size_t Rows, std::size_t Cols> struct mat {
+  /**
+   * data[i][j] accesses element at row i and column j
+   */
   std::array<std::array<T, Cols>, Rows> data{};
 };
+
+using m4x4f = mat<float, 4, 4>;
+using v2f = mat<float, 1, 2>;
+using v2d = mat<double, 1, 2>;
+using v3f = mat<float, 1, 3>;
+
+template <Arithmetic NewType, Arithmetic T, std::size_t Rows, std::size_t Cols>
+[[nodiscard]] constexpr mat<NewType, Rows, Cols>
+castAs(const mat<T, Rows, Cols> &in) {
+
+  static_assert(!std::same_as<T, NewType>,
+                "Casting to the same type doesn't make  sense.");
+
+  mat<NewType, Rows, Cols> out;
+
+  for (std::size_t i = 0; i < Rows; ++i) {
+    for (std::size_t j = 0; j < Cols; ++j) {
+      out.data[i][j] = static_cast<NewType>(in.data[i][j]);
+    }
+  }
+
+  return out;
+}
 
 template <Arithmetic T, std::size_t Size>
 [[nodiscard]] constexpr mat<T, Size, Size> diagonal(T value) {
@@ -34,7 +58,6 @@ template <Arithmetic T, std::size_t Size>
   for (std::size_t i = 0; i < Size; ++i) {
     out.data[i][i] = value;
   }
-
   return out;
 }
 
@@ -43,16 +66,13 @@ template <Arithmetic T, std::size_t Size>
   return diagonal<T, Size>(static_cast<T>(1));
 }
 
-using m4x4f = mat<float, 4, 4>;
-using v2f = mat<float, 1, 2>;
-using v2d = mat<double, 1, 2>;
-using v3f = mat<float, 1, 3>;
-
-template <Arithmetic T> constexpr mat<T, 1, 2> vec2(T x, T y, T z) {
+template <Arithmetic T>
+[[nodiscard]] constexpr mat<T, 1, 2> vec2(T x, T y, T z) {
   return mat<T, 1, 2>{.data = {{x, y}}};
 }
 
-template <Arithmetic T> mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
+template <Arithmetic T>
+[[nodiscard]] mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
   return mat<T, 1, 3>{.data = {{x, y, z}}};
 }
 
@@ -74,9 +94,9 @@ template <Arithmetic T, std::size_t Rows, std::size_t Cols>
 transpose(const mat<T, Rows, Cols> &m) {
   mat<T, Cols, Rows> out;
 
-  for (std::size_t i = 0; i < Rows; ++i) {
-    for (std::size_t j = 0; j < Cols; ++j) {
-      out.data[j][i] = m[i][j];
+  for (std::size_t i = 0; i < Cols; ++i) {
+    for (std::size_t j = 0; j < Rows; ++j) {
+      out.data[i][j] = m.data[j][i];
     }
   }
 
@@ -84,20 +104,21 @@ transpose(const mat<T, Rows, Cols> &m) {
 }
 
 // Matrix multiplication
-template <class T, std::size_t Rows, std::size_t Cols>
-[[nodiscard]] constexpr mat<T, Rows, Cols>
-operator*(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
-  // TODO :: Finish this
+template <Arithmetic T, std::size_t FirstRows, std::size_t FirstCols,
+          std::size_t SecondCols>
+[[nodiscard]] constexpr mat<T, FirstRows, SecondCols>
+operator*(const mat<T, FirstRows, FirstCols> &f,
+          const mat<T, FirstCols, SecondCols> &s) {
+  mat<T, FirstRows, SecondCols> out;
 
-  mat<T, Rows, Cols> out;
-
-  for (int i = 0; i < f.data.size(); ++i) {
-    for (int j = 0; j < f.data[i].size(); ++j) {
-      float sum = 0;
-      for (int k = 0; k < f.data.size(); ++k) {
-        sum += f.data[k][i] * s.data[j][k];
+  for (std::size_t i = 0; i < FirstRows; ++i) {
+    for (std::size_t j = 0; j < SecondCols; ++j) {
+      T sum = 0;
+      for (std::size_t k = 0; k < FirstCols; ++k) {
+        sum += f.data[i][k] * s.data[k][j];
       }
-      out.data[j][i] = sum;
+
+      out.data[i][j] = sum;
     }
   }
 
@@ -120,11 +141,10 @@ operator*(const mat<T, Rows, Cols> &f, const Multiplier mult) {
 }
 
 // Matrix addition
-template <class T, std::size_t Rows, std::size_t Cols>
+template <Arithmetic T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator+(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
   mat<T, Rows, Cols> out;
-
   for (std::size_t i = 0; i < f.data.size(); ++i) {
     for (std::size_t j = 0; j < f.data[i].size(); ++j) {
       out.data[i][j] = f.data[i][j] + s.data[i][j];
@@ -135,7 +155,7 @@ operator+(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
 }
 
 // Matrix substraction
-template <class T, std::size_t Rows, std::size_t Cols>
+template <Arithmetic T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
   mat<T, Rows, Cols> out;
@@ -156,7 +176,7 @@ operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
 /**
  * Normalizes the vector
  */
-template <class T, std::size_t Cols>
+template <Arithmetic T, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, 1, Cols> normalize(const mat<T, 1, Cols> &vec) {
 
   const T squareSum =
@@ -174,7 +194,7 @@ template <class T, std::size_t Cols>
   return out;
 }
 
-template <class T>
+template <Arithmetic T>
 [[nodiscard]] constexpr mat<T, 1, 3> cross(const mat<T, 1, 3> &first,
                                            const mat<T, 1, 3> &second) {
 
@@ -195,7 +215,7 @@ template <class Out, class T, std::size_t Rows, std::size_t Cols>
 
 #include <format>
 
-template <typename T, std::size_t Rows, std::size_t Cols>
+template <class T, std::size_t Rows, std::size_t Cols>
 struct std::formatter<mat<T, Rows, Cols>, char> {
 
   template <class ParseContext>
@@ -204,19 +224,19 @@ struct std::formatter<mat<T, Rows, Cols>, char> {
   }
 
   template <class FmtContext>
-  FmtContext::iterator format(mat<T, Rows, Cols> v, FmtContext &ctx) const {
+  FmtContext::iterator format(const mat<T, Rows, Cols> &v,
+                              FmtContext &ctx) const {
 
     // TODO :: Maybe this could be done better
-    std::string out;
+    std::string out = "[\n";
 
-    out.push_back('[');
-    for (const auto &row : v.data) {
-      out.push_back('[');
-      for (const auto &cell : row) {
+    for (std::size_t i = 0; i < Rows; ++i) {
+      out.append("  [");
+      for (const auto &cell : v.data[i]) {
         out += std::to_string(cell);
         out.push_back(',');
       }
-      out.push_back(']');
+      out.append("]\n");
     };
     out.push_back(']');
 
@@ -224,48 +244,3 @@ struct std::formatter<mat<T, Rows, Cols>, char> {
                           out);
   }
 };
-
-// template <typename T> struct std::formatter<v2<T>, char> {
-//
-//   template <class ParseContext>
-//   constexpr ParseContext::iterator parse(ParseContext &ctx) {
-//     return ctx.begin();
-//   }
-//
-//   template <class FmtContext>
-//   FmtContext::iterator format(v2<T> v, FmtContext &ctx) const {
-//
-//     return std::format_to(ctx.out(), "v2({},{})", v.x, v.y);
-//   }
-// };
-//
-// template <> struct std::formatter<v3, char> {
-//
-//   template <class ParseContext>
-//   constexpr ParseContext::iterator parse(ParseContext &ctx) {
-//     return ctx.begin();
-//   }
-//
-//   template <class FmtContext>
-//   FmtContext::iterator format(v3 v, FmtContext &ctx) const {
-//
-//     return std::format_to(ctx.out(), "v3({},{},{})", v.x, v.y, v.z);
-//   }
-// };
-//
-// template <> struct std::formatter<m4x4, char> {
-//
-//   template <class ParseContext>
-//   constexpr ParseContext::iterator parse(ParseContext &ctx) {
-//     return ctx.begin();
-//   }
-//
-//   template <class FmtContext>
-//   FmtContext::iterator format(m4x4 m, FmtContext &ctx) const {
-//
-//     return std::format_to(ctx.out(), "m4x4 (Column-major)
-//     (\n{}\n{}\n{}\n{})\n",
-//                           m.data[0], m.data[1], m.data[2], m.data[3]);
-//   }
-// };
-//
