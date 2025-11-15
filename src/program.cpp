@@ -103,7 +103,7 @@ bool Program::setM4x4(const std::string &name, const m4x4f &matrix) {
 
   GLsizei count = 1;
   GLboolean transpose = GL_FALSE;
-  glUniformMatrix4fv(*locOpt, count, transpose, dataAs<GLfloat>(matrix));
+  glUniformMatrix4fv(*locOpt, count, transpose, dataPtrAs<GLfloat>(matrix));
 
   return true;
 }

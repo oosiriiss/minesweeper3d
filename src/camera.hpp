@@ -37,21 +37,7 @@ struct Camera {
   v3f arbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
 
   [[nodiscard]] constexpr m4x4f getView() {
-
-    m4x4f positionMatrix{
-        .data = {std::array<float, 4>{1.0F, 0.0F, 0.0F, 0.0F},
-                 std::array<float, 4>{0.0F, 1.0F, 0.0F, 0.0F},
-                 std::array<float, 4>{0.0F, 0.0F, 1.0F, 0.0F},
-                 std::array<float, 4>{-position.x(), -position.y(),
-                                      -position.z(), 1.0F}}};
-
-    m4x4f rotationMatrix{
-        .data = {std::array<float, 4>{right.x(), up.x(), direction.x(), 0.0F},
-                 std::array<float, 4>{right.y(), up.y(), direction.y(), 0.0F},
-                 std::array<float, 4>{right.z(), up.z(), direction.z(), 0.0F},
-                 std::array<float, 4>{0.0F, 0.0F, 0.0F, 1.0F}}};
-
-    return rotationMatrix * positionMatrix;
+    return lookAt(position, direction, up, right);
   }
 
   /**

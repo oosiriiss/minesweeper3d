@@ -4,10 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <logzy/logzy.hpp>
-#include <string_view>
-#include <utility>
 
 #include "camera.hpp"
 #include "math.hpp"
@@ -107,6 +104,29 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 int main() {
+
+  // TODO :: Add tests
+  auto m1 =
+      lookAt(vec3<float>(4.0f, 4.0f, 4.0f), vec3<float>(1.1f, 1.1f, 1.1f),
+             vec3<float>(5.2f, 5.2f, 5.2f), vec3<float>(3.3f, 3.3f, 3.3f));
+  printMemoryLayout(m1);
+
+  logzy::info("m1 transposed: {}", transpose(m1));
+
+  logzy::info("Crossed: {}", cross(vec3<float>(1.0f, 0.0F, 0.0F),
+                                   vec3<float>(0.0f, 0.0f, -1.0f)));
+
+  logzy::info("Normalized: {}", normalize(vec3<float>(0.0F, 0.0F, 1.0F)));
+
+  // auto m2 = mat<float, 3, 3>{.data = {{
+  //                                {7.0F, 8.0F, 9.0F},
+  //                                {9.0F, 10.0F, 11.0F},
+  //                                {11.0F, 12.0F, 13.0F},
+  //                            }}};
+
+  // auto out = m1 * m2;
+  // std::println("v2 is: {}", out);
+
   // Initializing glfw
 
   if (!glfwInit()) {
@@ -234,8 +254,8 @@ int main() {
                      &(newMousePos.data[0][1]));
     v2d mouseDelta = newMousePos - mousePos;
 
-    // TODO :: Investigate why does yaw have to be negated in order to rotate in
-    // the right direction
+    // TODO :: Investigate why does yaw have to be negated in order to rotate
+    // in the right direction
     camera.rotate(vec3<float>(
         static_cast<float>(mouseDelta.data[0][1]) * horizontalSensitivity,
         static_cast<float>(-mouseDelta.data[0][0]) * verticalSensitivity,
@@ -277,17 +297,32 @@ int main() {
 
     m4x4f m = identity<float, 4>();
     // m = translate(m, v3{.x = -2.f, .y = -0.5F, .z = -5.f});
-    m = rotate(m, radians(50.0F * static_cast<float>(time)),
-               vec3<float>(0.0F, 1.0F, 0.0F));
-    m = scale(m, vec3<float>(0.1F, 0.1F, 0.1F));
+    // m = rotate(m, radians(50.0F * static_cast<float>(time)),
+    //           vec3<float>(0.0F, 1.0F, 0.0F));
+    m = scale(m, vec3<float>(0.07F, 0.07F, 0.07F));
 
     const m4x4f &v = camera.getView();
-    auto p = perspective();
+
+    constexpr float fov = 50.0f;
+    constexpr float near = 0.01f;
+    constexpr float far = 100.0f;
+    auto p = perspective(fov, ratio, near, far);
 
     program.use();
     program.setM4x4("model", m);
     program.setM4x4("view", v);
     program.setM4x4("projection", p);
+
+    // auto vloc = *program.getUniformLocation("view");
+    // auto ploc = *program.getUniformLocation("projection");
+    // auto lookat =
+    //     glm::lookAt(glm::vec3(camera.position.x(), camera.position.y(),
+    //                           camera.position.z()),
+    //                 glm::vec3(0.F, 0.0F, 0.0F), glm::vec3(0.0F, 1.0F, 0.0F));
+    //  auto persp = glm::perspective(50.0F, ratio, 0.1F, 100.0F);
+
+    // glUniformMatrix4fv(vloc, 1, GL_FALSE, glm::value_ptr(lookat));
+    // glUniformMatrix4fv(ploc, 1, GL_FALSE, glm::value_ptr(persp));
 
     glBindVertexArray(vertexArray);
     // glDrawArrays(GL_TRIANGLES, 0, verticesCount);

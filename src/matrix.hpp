@@ -13,14 +13,9 @@
 // TODO :: Maybe separate the vector template class from mat template
 
 template <typename T>
-concept Arithmetic = requires(T a, T b) {
-  { a + b } -> std::same_as<T>;
-  { a - b } -> std::same_as<T>;
-  { a / b } -> std::same_as<T>;
-  { a * b } -> std::same_as<T>;
-};
+concept Numeric = std::integral<T> || std::floating_point<T>;
 
-template <Arithmetic T, std::size_t Rows, std::size_t Cols> struct mat {
+template <Numeric T, std::size_t Rows, std::size_t Cols> struct mat {
   /**
    * data[i][j] accesses element at row i and column j
    */
@@ -32,7 +27,7 @@ using v2f = mat<float, 1, 2>;
 using v2d = mat<double, 1, 2>;
 using v3f = mat<float, 1, 3>;
 
-template <Arithmetic NewType, Arithmetic T, std::size_t Rows, std::size_t Cols>
+template <Numeric NewType, Numeric T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<NewType, Rows, Cols>
 castAs(const mat<T, Rows, Cols> &in) {
 
@@ -50,7 +45,27 @@ castAs(const mat<T, Rows, Cols> &in) {
   return out;
 }
 
-template <Arithmetic T, std::size_t Size>
+template <class Out, Numeric T, std::size_t Rows, std::size_t Cols>
+[[nodiscard]] constexpr const Out *dataPtrAs(const mat<T, Rows, Cols> &m) {
+  return static_cast<const Out *>(&(m.data[0][0]));
+}
+
+template <class T, std::size_t Rows, std::size_t Cols>
+void printMemoryLayout(const mat<T, Rows, Cols> &m) {
+
+  std::string out = "[";
+  for (std::size_t i = 0; i < Rows; ++i) {
+    for (std::size_t j = 0; j < Cols; ++j) {
+      out.append(std::to_string(m.data[i][j]) + ",");
+    }
+  }
+
+  out.push_back('\n');
+
+  logzy::info("Memory layout: {}", out);
+}
+
+template <Numeric T, std::size_t Size>
 [[nodiscard]] constexpr mat<T, Size, Size> diagonal(T value) {
 
   mat<T, Size, Size> out;
@@ -61,22 +76,20 @@ template <Arithmetic T, std::size_t Size>
   return out;
 }
 
-template <Arithmetic T, std::size_t Size>
+template <Numeric T, std::size_t Size>
 [[nodiscard]] constexpr mat<T, Size, Size> identity() {
   return diagonal<T, Size>(static_cast<T>(1));
 }
 
-template <Arithmetic T>
-[[nodiscard]] constexpr mat<T, 1, 2> vec2(T x, T y, T z) {
+template <Numeric T> [[nodiscard]] constexpr mat<T, 1, 2> vec2(T x, T y, T z) {
   return mat<T, 1, 2>{.data = {{x, y}}};
 }
 
-template <Arithmetic T>
-[[nodiscard]] mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
+template <Numeric T> [[nodiscard]] mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
   return mat<T, 1, 3>{.data = {{x, y, z}}};
 }
 
-template <Arithmetic T> struct mat<T, 1, 3> {
+template <Numeric T> struct mat<T, 1, 3> {
   std::array<std::array<T, 3>, 1> data{};
   [[nodiscard]] constexpr T &x() { return data[0][0]; }
   [[nodiscard]] constexpr const T &x() const { return data[0][0]; }
@@ -89,7 +102,7 @@ template <Arithmetic T> struct mat<T, 1, 3> {
 };
 
 // Transposition
-template <Arithmetic T, std::size_t Rows, std::size_t Cols>
+template <Numeric T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Cols, Rows>
 transpose(const mat<T, Rows, Cols> &m) {
   mat<T, Cols, Rows> out;
@@ -104,7 +117,7 @@ transpose(const mat<T, Rows, Cols> &m) {
 }
 
 // Matrix multiplication
-template <Arithmetic T, std::size_t FirstRows, std::size_t FirstCols,
+template <Numeric T, std::size_t FirstRows, std::size_t FirstCols,
           std::size_t SecondCols>
 [[nodiscard]] constexpr mat<T, FirstRows, SecondCols>
 operator*(const mat<T, FirstRows, FirstCols> &f,
@@ -126,7 +139,7 @@ operator*(const mat<T, FirstRows, FirstCols> &f,
 }
 
 // Scalar multiplication
-template <Arithmetic Multiplier, class T, std::size_t Rows, std::size_t Cols>
+template <Numeric Multiplier, class T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator*(const mat<T, Rows, Cols> &f, const Multiplier mult) {
   mat<T, Rows, Cols> out;
@@ -141,7 +154,7 @@ operator*(const mat<T, Rows, Cols> &f, const Multiplier mult) {
 }
 
 // Matrix addition
-template <Arithmetic T, std::size_t Rows, std::size_t Cols>
+template <Numeric T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator+(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
   mat<T, Rows, Cols> out;
@@ -155,7 +168,7 @@ operator+(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
 }
 
 // Matrix substraction
-template <Arithmetic T, std::size_t Rows, std::size_t Cols>
+template <Numeric T, std::size_t Rows, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, Rows, Cols>
 operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
   mat<T, Rows, Cols> out;
@@ -176,7 +189,7 @@ operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
 /**
  * Normalizes the vector
  */
-template <Arithmetic T, std::size_t Cols>
+template <Numeric T, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, 1, Cols> normalize(const mat<T, 1, Cols> &vec) {
 
   const T squareSum =
@@ -194,7 +207,7 @@ template <Arithmetic T, std::size_t Cols>
   return out;
 }
 
-template <Arithmetic T>
+template <Numeric T>
 [[nodiscard]] constexpr mat<T, 1, 3> cross(const mat<T, 1, 3> &first,
                                            const mat<T, 1, 3> &second) {
 
@@ -204,9 +217,17 @@ template <Arithmetic T>
                 first.x() * second.y() - first.y() * second.x()}}};
 }
 
-template <class Out, class T, std::size_t Rows, std::size_t Cols>
-[[nodiscard]] constexpr const Out *dataAs(const mat<T, Rows, Cols> &m) {
-  return static_cast<const Out *>(&(m.data[0][0]));
+template <Numeric T, std::size_t Cols>
+[[nodiscard]] constexpr T dot(const mat<T, 1, Cols> &first,
+                              const mat<T, 1, Cols> &second) {
+
+  T sum = 0;
+
+  for (std::size_t i = 0; i < Cols; ++i) {
+    sum += first.data[0][i] * second.data[0][i];
+  }
+
+  return sum;
 }
 
 //////////////////////
