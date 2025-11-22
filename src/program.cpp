@@ -49,7 +49,7 @@ Program::create(const std::vector<std::pair<std::string_view, Shader::Type>>
     return std::nullopt;
   }
 
-  logzy::debug("Program {} created", p->ID);
+  logzy::debug("Program {} linked", p->ID);
   return p;
 }
 

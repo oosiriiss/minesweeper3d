@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <logzy/logzy.hpp>
+#include <string_view>
 
 #include "camera.hpp"
 #include "math.hpp"
@@ -12,83 +13,95 @@
 #include "program.hpp"
 #include "shader.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 static const Vertex vertices[] = {
     // Front face of cube - Red
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0F, 0.0F}}, // BL
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0F, 1.0F}},  // TL
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {1.0F, 1.0F}},   // TR
     //
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0F, 0.0F}}, // BL
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {1.0F, 1.0F}},   // TR
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {1.0F, 0.0F}},  // BR
     // Back face of cube - Green
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0F, 0.0F}}, // BL
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0F, 1.0F}},  // TL
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0F, 1.0F}},   // TR
     //
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
-    {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {0.0F, 0.0F}}, // BL
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0F, 1.0F}},   // TR
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, {1.0F, 0.0F}},  // BR
     // Floor - Blue
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}, {0.0F, 1.0F}},
+    {{-1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {0.0F, 0.0F}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0F, 0.0F}},
     //
-    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}},
-    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}, {0.0F, 1.0F}},
+    {{1.0f, -1.0f, -1.0f}, {0.0f, 0.0f, 1.0f}, {1.0F, 1.0F}},
+    {{1.0f, -1.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0F, 0.0F}},
     // Ceil - Yellow
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}, {0.0F, 1.0F}},
+    {{-1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}, {0.0F, 0.0F}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}, {1.0F, 0.0F}},
     //
-    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}},
+    {{-1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}, {0.0F, 1.0F}},
+    {{1.0f, 1.0f, -1.0f}, {0.0f, 1.0f, 1.0f}, {1.0F, 1.0F}},
+    {{1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 1.0f}, {1.0F, 0.0F}},
     // Left wall - Purple
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {1.0F, 0.0F}},
+    {{-1.0f, -1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}, {0.0F, 0.0F}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}, {0.0F, 1.0F}},
     //
-    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}},
-    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}},
+    {{-1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {1.0F, 0.0F}},
+    {{-1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 1.0f}, {1.0F, 1.0F}},
+    {{-1.0f, 1.0f, -1.0f}, {1.0f, 0.0f, 1.0f}, {0.0F, 1.0F}},
     // Right wall - White
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0F, 0.0F}},
+    {{1.0f, -1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {0.0F, 0.0F}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {0.0F, 1.0F}},
     //
-    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}},
-    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}},
-
+    {{1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0F, 0.0F}},
+    {{1.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f}, {1.0F, 1.0F}},
+    {{1.0f, 1.0f, -1.0f}, {1.0f, 1.0f, 1.0f}, {0.0F, 1.0F}},
 };
 
 static constexpr auto verticesCount = sizeof(vertices) / sizeof(vertices[0]);
 
 constexpr static std::string_view vertexShaderText = R"""(
-#version 330
+#version 330 core
 in vec3 vCol;
 in vec3 vPos;
 in vec3 vOffset;
+in vec2 vTextureCoordinate;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
 out vec3 color;
+out vec2 textureCoordinate;
+
 void main() {
     gl_Position = projection * view * model * vec4(vPos + vOffset, 1.0);
     color = vCol;
+    textureCoordinate = vTextureCoordinate;
 };
 )""";
 
 constexpr static std::string_view fragmentShaderText = R"""(
-#version 330
+#version 330 core
 in vec3 color;
+in vec2 textureCoordinate;
+
+uniform sampler2D tex;
+
 out vec4 fragment;
+
+
 void main() {
-    fragment = vec4(color, 1.0);
+   fragment = texture(tex,textureCoordinate) * vec4(color,1.0);
 };
 )""";
 
@@ -104,29 +117,6 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 int main() {
-
-  // TODO :: Add tests
-  auto m1 =
-      lookAt(vec3<float>(4.0f, 4.0f, 4.0f), vec3<float>(1.1f, 1.1f, 1.1f),
-             vec3<float>(5.2f, 5.2f, 5.2f), vec3<float>(3.3f, 3.3f, 3.3f));
-  printMemoryLayout(m1);
-
-  logzy::info("m1 transposed: {}", transpose(m1));
-
-  logzy::info("Crossed: {}", cross(vec3<float>(1.0f, 0.0F, 0.0F),
-                                   vec3<float>(0.0f, 0.0f, -1.0f)));
-
-  logzy::info("Normalized: {}", normalize(vec3<float>(0.0F, 0.0F, 1.0F)));
-
-  // auto m2 = mat<float, 3, 3>{.data = {{
-  //                                {7.0F, 8.0F, 9.0F},
-  //                                {9.0F, 10.0F, 11.0F},
-  //                                {11.0F, 12.0F, 13.0F},
-  //                            }}};
-
-  // auto out = m1 * m2;
-  // std::println("v2 is: {}", out);
-
   // Initializing glfw
 
   if (!glfwInit()) {
@@ -185,6 +175,44 @@ int main() {
   glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
   glBufferData(GL_ARRAY_BUFFER, sizeof(cubes), cubes.data(), GL_STATIC_DRAW);
 
+  // Texture
+  v2i textureDim;
+  std::int32_t channels;
+  const char *texturePath{"assets/container.jpg"};
+
+  // Making sure the texture isnt upside down
+  stbi_set_flip_vertically_on_load(true);
+
+  unsigned char *data =
+      stbi_load(texturePath, &textureDim.x(), &textureDim.y(), &channels, 0);
+
+  if (data == nullptr) {
+    logzy::critical(
+        "Couldn't find file: {}. Make sure it is in the executable's directory",
+        texturePath);
+    return -1;
+  }
+
+  logzy::info("Loaded texture. Dimensions: {}x{} and channels: {}",
+              textureDim.x(), textureDim.y(), channels);
+
+  GLuint texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureDim.x(), textureDim.y(), 0,
+               GL_RGB, GL_UNSIGNED_BYTE, data);
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  // Freeing the image data as it is already loaded onto GPU.
+  stbi_image_free(data);
+
   std::optional<Program> programOpt = Program::create(std::vector{
       std::pair{vertexShaderText, Shader::Type::Vertex},
       std::pair{fragmentShaderText, Shader::Type::Fragment},
@@ -195,34 +223,56 @@ int main() {
   GLint vposLocation = -1;
   GLint voffsetLocation = -1;
   GLint vcolLocation = -1;
+  GLint textureLocation = -1;
+
+  logzy::info("Checking attribute locations");
 
   if (auto vposLocationOpt = program.getAttribLocation("vPos")) {
     vposLocation = *vposLocationOpt;
   } else {
     return -1;
   }
+  logzy::info("vposLocation found");
   if (auto vcolLocationOpt = program.getAttribLocation("vCol")) {
     vcolLocation = *vcolLocationOpt;
   } else {
     return -1;
   }
+  logzy::info("vcolLocation found");
   if (auto voffsetLocationOpt = program.getAttribLocation("vOffset")) {
     voffsetLocation = *voffsetLocationOpt;
   } else {
     return -1;
   }
 
+  logzy::info("voffsetLocation found");
+  if (auto textureLocationOpt =
+
+          program.getAttribLocation("vTextureCoordinate")) {
+    textureLocation = *textureLocationOpt;
+  } else {
+    return -1;
+  }
+  logzy::info("vtextureLocation found");
+  logzy::info("All attribute locations found");
+
   GLuint vertexArray;
   glGenVertexArrays(1, &vertexArray);
 
   glBindVertexArray(vertexArray);
   glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-  glEnableVertexAttribArray(vposLocation);
+
   glVertexAttribPointer(vposLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, position));
-  glEnableVertexAttribArray(vcolLocation);
+  glEnableVertexAttribArray(vposLocation);
+
   glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         (void *)offsetof(Vertex, color));
+  glEnableVertexAttribArray(vcolLocation);
+
+  glVertexAttribPointer(textureLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                        (void *)offsetof(Vertex, texture));
+  glEnableVertexAttribArray(textureLocation);
 
   glBindBuffer(GL_ARRAY_BUFFER, instanceBuffer);
   glEnableVertexAttribArray(voffsetLocation);
@@ -324,6 +374,8 @@ int main() {
     // glUniformMatrix4fv(vloc, 1, GL_FALSE, glm::value_ptr(lookat));
     // glUniformMatrix4fv(ploc, 1, GL_FALSE, glm::value_ptr(persp));
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
     glBindVertexArray(vertexArray);
     // glDrawArrays(GL_TRIANGLES, 0, verticesCount);
     glDrawArraysInstanced(GL_TRIANGLES, 0, verticesCount, cubes.size());

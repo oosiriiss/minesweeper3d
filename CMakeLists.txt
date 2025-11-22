@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.19)
 
 project(minesweeper3d)
 
-# Including glad 
-include_directories(./glad)
 
 
 include(FetchContent)
@@ -18,7 +16,7 @@ FetchContent_MakeAvailable(logzy)
 add_executable(
    minesweeper3d
 
-   ./glad/glad.c
+   ./vendor/glad/glad.c
 
    ./src/main.cpp
 
@@ -39,7 +37,14 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 # TODO Turn off building examples once base is set up
 set(GLFW_BUILD_EXAMPLES ON CACHE BOOL "" FORCE)
 
-add_subdirectory(glfw)
+
+
+add_subdirectory(./vendor/glfw)
+
+include_directories(./vendor/glad)
+include_directories(./vendor/glfw)
+include_directories(./vendor/stb)
+
 find_package(OpenGL REQUIRED)
 
 # TODO :: GLM is only for now so I dont wanna bother setting up dependency properly
