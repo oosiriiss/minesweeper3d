@@ -4,12 +4,6 @@
 #include "math/matrix.hpp"
 #include <logzy/logzy.hpp>
 
-struct Vertex {
-  v3f position;
-  v3f color;
-  v2f texture;
-};
-
 struct Camera {
 
   constexpr Camera(v3f initialPosition, v3f arbitraryUp)

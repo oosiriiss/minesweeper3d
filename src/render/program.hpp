@@ -17,6 +17,11 @@ struct Program {
   std::optional<GLint> getUniformLocation(const std::string &name) const;
   std::optional<GLint> getAttribLocation(const std::string &name) const;
 
-  bool setBool(const std::string &name, bool value);
-  bool setM4x4(const std::string &name, const m4x4f &value);
+  bool setBool(const std::string &name, bool value) const;
+  // Assumes location is valid
+  void setBool(GLint location, bool value) const;
+
+  bool setM4x4(const std::string &name, const m4x4f &matrix) const;
+  // Assumes location is valid
+  void setM4x4(GLint location, const m4x4f &matrix) const;
 };

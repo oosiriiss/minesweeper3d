@@ -20,10 +20,14 @@ add_executable(
 
    ./src/main.cpp
 
+   ./src/game/board.cpp
+   ./src/game/board.hpp
+
    ./src/math/math.hpp
    ./src/math/matrix.hpp
 
    ./src/render/camera.hpp
+   ./src/render/mesh.hpp
    ./src/render/program.cpp
    ./src/render/program.hpp
    ./src/render/shader.cpp

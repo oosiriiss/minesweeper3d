@@ -82,7 +82,7 @@ std::optional<GLint> Program::getAttribLocation(const std::string &name) const {
   return std::optional(location);
 }
 
-bool Program::setBool(const std::string &name, bool value) {
+bool Program::setBool(const std::string &name, const bool value) const {
 
   auto locOpt = getUniformLocation(name);
   if (!locOpt) {
@@ -94,7 +94,11 @@ bool Program::setBool(const std::string &name, bool value) {
   return true;
 }
 
-bool Program::setM4x4(const std::string &name, const m4x4f &matrix) {
+void Program::setBool(const GLint location, const bool value) const {
+  glUniform1i(location, static_cast<GLint>(value));
+}
+
+bool Program::setM4x4(const std::string &name, const m4x4f &matrix) const {
 
   auto locOpt = getUniformLocation(name);
   if (!locOpt) {
@@ -106,4 +110,11 @@ bool Program::setM4x4(const std::string &name, const m4x4f &matrix) {
   glUniformMatrix4fv(*locOpt, count, transpose, dataPtrAs<GLfloat>(matrix));
 
   return true;
+}
+
+void Program::setM4x4(const GLint location, const m4x4f &matrix) const {
+
+  GLsizei count = 1;
+  GLboolean transpose = GL_FALSE;
+  glUniformMatrix4fv(location, count, transpose, dataPtrAs<GLfloat>(matrix));
 }
