@@ -3,9 +3,8 @@
 #include "glad.h"
 #include "math/math.hpp"
 #include "render/mesh.hpp"
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <cassert>
+#include <logzy/logzy.hpp>
 
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
 
@@ -17,12 +16,39 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   shaderProgram.setM4x4("view", view);
   shaderProgram.setM4x4("projection", projection);
 
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, texture);
-  glBindVertexArray(vertexArray);
+  glBindVertexArray(vertexArrayID);
 
-  GLuint instances = 125;
+  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
+         "Board is generated and has least one cell.");
+
+  // Assuming cells_ is a cube where each dimension has the same amount of
+  // objects
+  std::size_t instances =
+      cells_.size() * cells_[0].size() * cells_[0][0].size();
   glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(), instances);
+}
+
+void Board::generateBoard(const v3i dimensions) {
+
+  const std::size_t cellCount =
+      dimensions.x() + dimensions.y() + dimensions.z();
+
+  cells_.clear();
+  cells_ = std::vector(
+      dimensions.x(),
+      std::vector(dimensions.y(), std::vector<std::optional<Cell>>(
+                                      dimensions.z(), std::nullopt)));
+
+  for (std::int32_t x = 0; x < dimensions.x(); ++x) {
+    for (std::int32_t y = 0; y < dimensions.y(); ++y) {
+      for (std::int32_t z = 0; z < dimensions.z(); ++z) {
+        std::uint8_t bombs = z % 5;
+
+        cells_[x][y][z] =
+            (Cell{.bombsAround = static_cast<std::uint8_t>(z % 5)});
+      }
+    }
+  }
 }
 
 constexpr static std::string_view vertexShaderText = R"""(
@@ -30,34 +56,27 @@ constexpr static std::string_view vertexShaderText = R"""(
 in vec3 vCol;
 in vec3 vPos;
 in vec3 vOffset;
-in vec2 vTextureCoordinate;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
 out vec3 color;
-out vec2 textureCoordinate;
 
 void main() {
     gl_Position = projection * view * model * vec4(vPos + vOffset, 1.0);
     color = vCol;
-    textureCoordinate = vTextureCoordinate;
 };
 )""";
 
 constexpr static std::string_view fragmentShaderText = R"""(
 #version 330 core
 in vec3 color;
-in vec2 textureCoordinate;
-
-uniform sampler2D tex;
 
 out vec4 fragment;
 
-
 void main() {
-   fragment = texture(tex,textureCoordinate) * vec4(color,1.0);
+   fragment = vec4(color,1.0);
 };
 )""";
 
@@ -65,135 +84,144 @@ void main() {
 
   std::optional<Board> board(Board{});
 
-  glGenBuffers(1, &board->cubeVertexBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, board->cubeVertexBuffer);
-  glBufferData(GL_ARRAY_BUFFER, CUBE_VERTICES.size() * sizeof(CUBE_VERTICES[0]),
-               CUBE_VERTICES.data(), GL_STATIC_DRAW);
+  board->loadCubeMesh(std::span{CUBE_VERTICES});
+  board->generateBoard(dimensions);
 
-  // Generating cube offsets
-  std::size_t instancesCount = static_cast<std::size_t>(
-      dimensions.x() * dimensions.y() * dimensions.z());
-
-  std::vector<Vertex> instances;
-  instances.reserve(instancesCount);
-
-  float spacing = 3.0f;
-
-  for (int x = 0; x < dimensions.x(); ++x) {
-    for (int y = 0; y < dimensions.y(); ++y) {
-      for (int z = 0; z < dimensions.z(); ++z) {
-        instances.push_back(Vertex{
-            .position = vec3<float>(spacing * x, spacing * y, spacing * z),
-            .color = Color::Red,
-            .texture = {0.0F, 0.0F}});
-      }
-    }
-  }
-
-  glGenBuffers(1, &board->cellInstanceBuffer);
-  glBindBuffer(GL_ARRAY_BUFFER, board->cellInstanceBuffer);
-  glBufferData(GL_ARRAY_BUFFER, instances.size() * sizeof(instances[0]),
-               instances.data(), GL_DYNAMIC_DRAW);
-
-  v2i textureDim;
-  std::int32_t channels;
-  const char *texturePath{"assets/container.jpg"};
-
-  // Making sure the texture isnt upside down
-  stbi_set_flip_vertically_on_load(true);
-
-  unsigned char *textureData =
-      stbi_load(texturePath, &textureDim.x(), &textureDim.y(), &channels, 0);
-
-  if (textureData == nullptr) {
-    logzy::critical(
-        "Couldn't find file: {}. Make sure it is in the executable's directory",
-        texturePath);
-    return std::nullopt;
-  }
-
-  logzy::info("Loaded texture. Dimensions: {}x{} and channels: {}",
-              textureDim.x(), textureDim.y(), channels);
-
-  glGenTextures(1, &board->texture);
-  glBindTexture(GL_TEXTURE_2D, board->texture);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureDim.x(), textureDim.y(), 0,
-               GL_RGB, GL_UNSIGNED_BYTE, textureData);
-  glGenerateMipmap(GL_TEXTURE_2D);
-
-  // Freeing the image data as it is already loaded onto GPU.
-  stbi_image_free(textureData);
+  glGenBuffers(1, &board->cellInstanceBufferID);
+  board->updateCubeInstanceData();
 
   std::optional<Program> programOpt = Program::create(std::vector{
       std::pair{vertexShaderText, Shader::Type::Vertex},
       std::pair{fragmentShaderText, Shader::Type::Fragment},
   });
 
+  if (!programOpt.has_value()) {
+    logzy::critical("Failed to create shader program for board");
+    return std::nullopt;
+  }
   board->shaderProgram = std::move(*programOpt);
 
-  const Program &program = board->shaderProgram;
-
-  if (auto vposLocationOpt = program.getAttribLocation("vPos")) {
-    board->vposLocation = *vposLocationOpt;
-  } else {
-    return std::nullopt;
-  }
-  logzy::info("vposLocation found");
-  if (auto vcolLocationOpt = program.getAttribLocation("vCol")) {
-    board->vcolLocation = *vcolLocationOpt;
-  } else {
-    return std::nullopt;
-  }
-  logzy::info("vcolLocation found");
-  if (auto voffsetLocationOpt = program.getAttribLocation("vOffset")) {
-    board->voffsetLocation = *voffsetLocationOpt;
-  } else {
+  if (!board->setupVAO()) {
+    logzy::critical("couldn't setup VAO for board");
     return std::nullopt;
   }
 
-  logzy::info("voffsetLocation found");
-  if (auto textureLocationOpt =
-
-          program.getAttribLocation("vTextureCoordinate")) {
-    board->textureLocation = *textureLocationOpt;
-  } else {
-    return std::nullopt;
-  }
-
-  logzy::info("vTextureCoordiante found");
-  glGenVertexArrays(1, &board->vertexArray);
-
-  glBindVertexArray(board->vertexArray);
-  glBindBuffer(GL_ARRAY_BUFFER, board->cubeVertexBuffer);
-
-  glVertexAttribPointer(board->vposLocation, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(CUBE_VERTICES[0]), nullptr);
-  glEnableVertexAttribArray(board->vposLocation);
-
-  // Setting up instances
-  glBindBuffer(GL_ARRAY_BUFFER, board->cellInstanceBuffer);
-  glEnableVertexAttribArray(board->voffsetLocation);
-  glVertexAttribPointer(board->voffsetLocation, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(Vertex), offsetof(Vertex, position));
-
-  glVertexAttribPointer(board->vcolLocation, 3, GL_FLOAT, GL_FALSE,
-                        sizeof(Vertex), (void *)offsetof(Vertex, color));
-  glEnableVertexAttribArray(board->vcolLocation);
-
-  glVertexAttribPointer(board->textureLocation, 2, GL_FLOAT, GL_FALSE,
-                        sizeof(Vertex), (void *)offsetof(Vertex, texture));
-  glEnableVertexAttribArray(board->textureLocation);
-
-  glVertexAttribDivisor(board->voffsetLocation, 1);
-  glVertexAttribDivisor(board->vcolLocation, 1);
-  glVertexAttribDivisor(board->textureLocation, 1);
+  logzy::info("Board created");
 
   return board;
+}
+
+void Board::loadCubeMesh(const std::span<const v3f> mesh) {
+  glGenBuffers(1, &cubeMeshID);
+  glBindBuffer(GL_ARRAY_BUFFER, cubeMeshID);
+  std::size_t meshSizeBytes = mesh.size() * sizeof(mesh[0]);
+  glBufferData(GL_ARRAY_BUFFER, meshSizeBytes, mesh.data(), GL_STATIC_DRAW);
+}
+
+void Board::updateCubeInstanceData() const {
+
+  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
+         "Board is generated and has least one cell.");
+
+  std::vector<Cell::VertexData> instanceData;
+  instanceData.reserve(cells_.size() * cells_[0].size() * cells_[0][0].size());
+
+  float spacing = 3.0F;
+
+  logzy::info("Creating cube vertex data for {} instances",
+              instanceData.capacity());
+
+  for (std::size_t x = 0; x < cells_.size(); ++x) {
+    for (std::size_t y = 0; y < cells_[x].size(); ++y) {
+      for (std::size_t z = 0; z < cells_[x][y].size(); ++z) {
+        std::optional<Cell> cell = cells_[x][y][z];
+
+        if (!cell.has_value()) {
+          continue;
+        }
+
+        instanceData.emplace_back(Cell::VertexData{
+            .positionOffset =
+                vec3<float>(x * spacing, y * spacing, z * spacing),
+            .color = cell->getColor(),
+        });
+      }
+    }
+  }
+
+  logzy::info("Loaded {} cube instaces", instanceData.size());
+
+  // Uploading the data to GPU
+  const std::size_t instanceDataSizeBytes =
+      instanceData.size() * sizeof(instanceData[0]);
+
+  glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
+  glBufferData(GL_ARRAY_BUFFER, instanceDataSizeBytes, instanceData.data(),
+               GL_DYNAMIC_DRAW);
+}
+
+bool Board::setupVAO() {
+
+  // For mesh vertices
+  const char *positionAttributeName = "vPos";
+  const char *colorAttributeName = "vCol";
+  // Actual cube position
+  const char *positionOffsetAttributeName = "vOffset";
+
+  GLint vposLocation = -1;
+  GLint voffsetLocation = -1;
+  GLint vcolLocation = -1;
+
+  if (auto vposLocationOpt =
+          shaderProgram.getAttribLocation(positionAttributeName)) {
+    vposLocation = *vposLocationOpt;
+  } else {
+    logzy::critical("Couldn't find {} attribute", positionAttributeName);
+    return false;
+  }
+  logzy::info("{} shader attribute found", positionAttributeName);
+
+  if (auto vcolLocationOpt =
+          shaderProgram.getAttribLocation(colorAttributeName)) {
+    vcolLocation = *vcolLocationOpt;
+  } else {
+    logzy::critical("Couldn't find {} attribute", colorAttributeName);
+    return false;
+  }
+  logzy::info("{} shader attribute found", colorAttributeName);
+
+  if (auto voffsetLocationOpt =
+          shaderProgram.getAttribLocation(positionOffsetAttributeName)) {
+    voffsetLocation = *voffsetLocationOpt;
+  } else {
+    logzy::critical("Couldn't find {} attribute", positionOffsetAttributeName);
+    return false;
+  }
+  logzy::info("{} shader attribute found", positionOffsetAttributeName);
+
+  // Setting up VAO
+  glGenVertexArrays(1, &vertexArrayID);
+  glBindVertexArray(vertexArrayID);
+
+  // cube mesh
+  glBindBuffer(GL_ARRAY_BUFFER, cubeMeshID);
+  glVertexAttribPointer(vposLocation, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(CUBE_VERTICES[0]), nullptr);
+  glEnableVertexAttribArray(vposLocation);
+
+  // Setting up instance data
+  glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
+  glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(Cell::VertexData),
+                        offsetof(Cell::VertexData, positionOffset));
+  glEnableVertexAttribArray(voffsetLocation);
+
+  glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE,
+                        sizeof(Cell::VertexData),
+                        (void *)offsetof(Cell::VertexData, color));
+  glEnableVertexAttribArray(vcolLocation);
+
+  glVertexAttribDivisor(voffsetLocation, 1);
+  glVertexAttribDivisor(vcolLocation, 1);
+  return true;
 }

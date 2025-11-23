@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "math/matrix.hpp"
 #include "render/colors.hpp"
 #include "render/program.hpp"
@@ -9,14 +11,10 @@ struct Cell {
   std::uint8_t bombsAround;
 
   struct VertexData {
+    v3f positionOffset;
     v3f color;
   };
 
-  [[nodiscard]] constexpr VertexData getVertexData() const noexcept {
-    return VertexData{.color = getColor()};
-  }
-
-private:
   [[nodiscard]] constexpr v3f getColor() const noexcept {
     switch (bombsAround) {
     case 0:
@@ -42,20 +40,26 @@ struct Board {
   [[nodiscard]] static std::optional<Board> create(v3i dimensions);
 
 private:
+  // Game related methods
+  void generateBoard(const v3i dimensions);
+
+  // Render related methods
+  void loadCubeMesh(const std::span<const v3f> mesh);
+  bool setupVAO();
+  void updateCubeInstanceData() const;
+
   /// Game data
-  std::vector<Cell> cells_;
+
+  // Board data
+  // Accessed like: Board[x][y][z]
+  // TODO :: Maybe convert this 3D vector to a linear vector.
+  std::vector<std::vector<std::vector<std::optional<Cell>>>> cells_;
 
   /// Render data
   Program shaderProgram;
 
-  GLuint vertexArray;
+  GLuint vertexArrayID;
 
-  GLuint cubeVertexBuffer;
-  GLuint cellInstanceBuffer;
-  GLuint texture;
-
-  GLint vposLocation = -1;
-  GLint voffsetLocation = -1;
-  GLint vcolLocation = -1;
-  GLint textureLocation = -1;
+  GLuint cubeMeshID;
+  GLuint cellInstanceBufferID;
 };
