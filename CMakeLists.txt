@@ -20,14 +20,17 @@ add_executable(
 
    ./src/main.cpp
 
-   ./src/math.hpp
+   ./src/math/math.hpp
+   ./src/math/matrix.hpp
 
-   ./src/shader.cpp
-   ./src/shader.hpp
-
-   ./src/program.cpp
-   ./src/program.hpp
+   ./src/render/camera.hpp
+   ./src/render/program.cpp
+   ./src/render/program.hpp
+   ./src/render/shader.cpp
+   ./src/render/shader.hpp
 )
+
+include_directories(./src)
 
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE)

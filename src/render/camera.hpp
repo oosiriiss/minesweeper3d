@@ -1,8 +1,14 @@
 #pragma once
 
-#include "math.hpp"
-#include "matrix.hpp"
+#include "math/math.hpp"
+#include "math/matrix.hpp"
 #include <logzy/logzy.hpp>
+
+struct Vertex {
+  v3f position;
+  v3f color;
+  v2f texture;
+};
 
 struct Camera {
 

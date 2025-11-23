@@ -7,11 +7,11 @@
 #include <logzy/logzy.hpp>
 #include <string_view>
 
-#include "camera.hpp"
-#include "math.hpp"
-#include "matrix.hpp"
-#include "program.hpp"
-#include "shader.hpp"
+#include "math/math.hpp"
+#include "math/matrix.hpp"
+#include "render/camera.hpp"
+#include "render/program.hpp"
+#include "render/shader.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"

@@ -7,12 +7,6 @@
 
 #include "matrix.hpp"
 
-struct Vertex {
-  v3f position;
-  v3f color;
-  v2f texture;
-};
-
 [[nodiscard]] constexpr float radians(float degrees) {
   return degrees * std::numbers::pi / 180.0F;
 }

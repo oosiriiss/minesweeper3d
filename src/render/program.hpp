@@ -1,6 +1,8 @@
 #pragma once
+
+#include "math/matrix.hpp"
+
 #include "glad.h"
-#include "matrix.hpp"
 #include "shader.hpp"
 #include <vector>
 
