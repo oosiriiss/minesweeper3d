@@ -28,7 +28,7 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(), instances);
 }
 
-void Board::generateBoard(const v3i dimensions) {
+void Board::generateBoard(const v3u dimensions) {
 
   const std::size_t cellCount =
       dimensions.x() + dimensions.y() + dimensions.z();
@@ -36,19 +36,23 @@ void Board::generateBoard(const v3i dimensions) {
   cells_.clear();
   cells_ = std::vector(
       dimensions.x(),
-      std::vector(dimensions.y(), std::vector<std::optional<Cell>>(
-                                      dimensions.z(), std::nullopt)));
+      std::vector(dimensions.y(), std::vector<Cell>(dimensions.z(), Cell{})));
 
-  for (std::int32_t x = 0; x < dimensions.x(); ++x) {
+  for (std::int32_t z = 0; z < dimensions.z(); ++z) {
     for (std::int32_t y = 0; y < dimensions.y(); ++y) {
-      for (std::int32_t z = 0; z < dimensions.z(); ++z) {
+      for (std::int32_t x = 0; x < dimensions.x(); ++x) {
         std::uint8_t bombs = z % 5;
 
-        cells_[x][y][z] =
-            (Cell{.bombsAround = static_cast<std::uint8_t>(z % 5)});
+        cells_[z][y][x] =
+            (Cell{.bombsAround = static_cast<std::uint8_t>(x % 5)});
       }
     }
   }
+}
+
+void Board::dig(v3u coords) noexcept {
+  cells_[coords.z()][coords.y()][coords.x()].isDug = true;
+  updateCubeInstanceData();
 }
 
 constexpr static std::string_view vertexShaderText = R"""(
@@ -80,7 +84,7 @@ void main() {
 };
 )""";
 
-[[nodiscard]] std::optional<Board> Board::create(const v3i dimensions) {
+[[nodiscard]] std::optional<Board> Board::create(const v3u dimensions) {
 
   std::optional<Board> board(Board{});
 
@@ -131,19 +135,19 @@ void Board::updateCubeInstanceData() const {
   logzy::info("Creating cube vertex data for {} instances",
               instanceData.capacity());
 
-  for (std::size_t x = 0; x < cells_.size(); ++x) {
-    for (std::size_t y = 0; y < cells_[x].size(); ++y) {
-      for (std::size_t z = 0; z < cells_[x][y].size(); ++z) {
-        std::optional<Cell> cell = cells_[x][y][z];
+  for (std::size_t z = 0; z < cells_.size(); ++z) {
+    for (std::size_t y = 0; y < cells_[z].size(); ++y) {
+      for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
+        const Cell &cell = cells_[z][y][x];
 
-        if (!cell.has_value()) {
+        if (cell.isDug) {
           continue;
         }
 
         instanceData.emplace_back(Cell::VertexData{
             .positionOffset =
                 vec3<float>(x * spacing, y * spacing, z * spacing),
-            .color = cell->getColor(),
+            .color = cell.getColor(),
         });
       }
     }
@@ -213,7 +217,7 @@ bool Board::setupVAO() {
   glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
   glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE,
                         sizeof(Cell::VertexData),
-                        offsetof(Cell::VertexData, positionOffset));
+                        (void *)offsetof(Cell::VertexData, positionOffset));
   glEnableVertexAttribArray(voffsetLocation);
 
   glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE,

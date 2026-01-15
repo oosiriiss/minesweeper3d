@@ -2,6 +2,7 @@
 #include "glad.h"
 #include <GLFW/glfw3.h>
 #include <logzy/logzy.hpp>
+#include <random>
 
 #include "math/matrix.hpp"
 #include "render/camera.hpp"
@@ -50,12 +51,19 @@ int main() {
 
   Board board;
 
-  if (auto boardOpt = Board::create(vec3<std::int32_t>(10, 10, 10))) {
+  constexpr std::uint32_t BOARD_SIZE{10};
+
+  if (auto boardOpt = Board::create(v3u{BOARD_SIZE, BOARD_SIZE, BOARD_SIZE})) {
     board = std::move(*boardOpt);
   } else {
     logzy::critical("Couldn't create board");
     return -1;
   }
+
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type>
+      boardIndexDistribution(0, BOARD_SIZE - 1);
 
   constexpr v3f cameraInitialPosition = vec3<float>(.0F, .0F, 20.0F);
   constexpr v3f cameraArbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
@@ -112,6 +120,13 @@ int main() {
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
       camera.move(Camera::Direction::Down, cameraDistance);
+    }
+    if (glfwGetKey(window, GLFW_KEY_P)) {
+      v3u coords{static_cast<unsigned int>(boardIndexDistribution(rng)),
+                 static_cast<unsigned int>(boardIndexDistribution(rng)),
+                 static_cast<unsigned int>(boardIndexDistribution(rng))};
+
+      board.dig(coords);
     }
 
     int width, height;

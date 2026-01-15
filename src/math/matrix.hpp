@@ -28,6 +28,7 @@ using v2f = mat<float, 1, 2>;
 using v2d = mat<double, 1, 2>;
 using v3f = mat<float, 1, 3>;
 using v3i = mat<std::int32_t, 1, 3>;
+using v3u = mat<std::uint32_t, 1, 3>;
 
 // Vector utility specializations
 template <Numeric T> struct mat<T, 1, 2> {
@@ -138,7 +139,7 @@ operator*(const mat<T, FirstRows, FirstCols> &f,
 
   for (std::size_t i = 0; i < FirstRows; ++i) {
     for (std::size_t j = 0; j < SecondCols; ++j) {
-      T sum = 0;
+      T sum{0};
       for (std::size_t k = 0; k < FirstCols; ++k) {
         sum += f.data[i][k] * s.data[k][j];
       }
