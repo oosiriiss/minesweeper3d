@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 
+option(ENABLE_DEBUG_UTILS "Enable debug_utils.hpp" ON)
+
 project(minesweeper3d)
 
 
@@ -34,6 +36,11 @@ add_executable(
    ./src/render/shader.hpp
 )
 
+
+if(ENABLE_DEBUG_UTILS)
+   target_compile_definitions(minesweeper3d PUBLIC ENABLE_DEBUG_UTILS)
+endif()
+
 include_directories(./src)
 
 
@@ -45,12 +52,12 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES ON CACHE BOOL "" FORCE)
 
 
-
 add_subdirectory(./vendor/glfw)
 
 include_directories(./vendor/glad)
 include_directories(./vendor/glfw)
 include_directories(./vendor/stb)
+include_directories(./vendor/debug_utils)
 
 find_package(OpenGL REQUIRED)
 
