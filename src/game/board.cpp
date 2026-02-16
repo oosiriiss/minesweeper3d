@@ -1,5 +1,6 @@
 
 #include "board.hpp"
+#include "debug_utils.hpp"
 #include "glad.h"
 #include "math/math.hpp"
 #include "render/mesh.hpp"
@@ -9,9 +10,10 @@
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
 
   shaderProgram.use();
-  // Cache the location of uniforms
+  // TODO :: Cache the location of uniforms
   shaderProgram.setM4x4(
-      "model", scale(identity<float, 4>(), vec3<float>(0.07f, 0.07f, 0.07f)));
+      "model",
+      scale(identity<float, 4>(), vec3<float>(cellSize, cellSize, cellSize)));
 
   shaderProgram.setM4x4("view", view);
   shaderProgram.setM4x4("projection", projection);
@@ -53,6 +55,65 @@ void Board::generateBoard(const v3u dimensions) {
 void Board::dig(v3u coords) noexcept {
   cells_[coords.z()][coords.y()][coords.x()].isDug = true;
   updateCubeInstanceData();
+}
+
+[[nodiscard]] bool Board::intersect(v3uz cellCoordiantes, v3f playerPos,
+                                    v3f playerDir) const noexcept {
+  v3f pos = cellPosition(cellCoordiantes);
+  float tmin = 0.0;
+  float tmax = INFINITY;
+
+  for (size_t i = 0; i < playerPos.data[0].size(); ++i) {
+    float t1 = (pos.data[0][i] - playerPos.data[0][i]) / playerDir.data[0][i];
+    float t2 = (pos.data[0][i] + cellSize - playerPos.data[0][i]) /
+               playerDir.data[0][i];
+
+    tmin = std::max(tmin, std::min(t1, t2));
+    tmax = std::min(tmax, std::max(t1, t2));
+  }
+  return tmin < tmax;
+}
+
+void Board::testCollisions(v3f playerPos, v3f playerDir) {
+
+  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
+         "Board is generated and has least one cell.");
+
+  std::vector<Cell::VertexData> instanceData;
+  instanceData.reserve(cells_.size() * cells_[0].size() * cells_[0][0].size());
+
+  for (std::size_t z = 0; z < cells_.size(); ++z) {
+    for (std::size_t y = 0; y < cells_[z].size(); ++y) {
+      for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
+        const Cell &cell = cells_[z][y][x];
+
+        if (cell.isDug) {
+          continue;
+        }
+
+        Cell::VertexData vd{.positionOffset = cellPosition(vec3(x, y, z)),
+                            .color =
+                                (intersect(vec3(x, y, z), playerPos, playerDir))
+                                    ? vec3(1.0F, 0.08F, 0.6F)
+                                    : vec3(0.1f, 0.1f, 0.1f)};
+
+        DEBUG_ONLY(if (intersect(vec3(x, y, z), playerPos, playerDir)) {
+          logzy::debug("Intersecting with cube[{}][{}][{}], cube position: {}",
+                       z, y, x, cellPosition(vec3(x, y, z)));
+        });
+
+        instanceData.emplace_back(vd);
+      }
+    }
+  }
+
+  // Uploading the data to GPU
+  const std::size_t instanceDataSizeBytes =
+      instanceData.size() * sizeof(instanceData[0]);
+
+  glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
+  glBufferData(GL_ARRAY_BUFFER, instanceDataSizeBytes, instanceData.data(),
+               GL_DYNAMIC_DRAW);
 }
 
 constexpr static std::string_view vertexShaderText = R"""(
@@ -130,8 +191,6 @@ void Board::updateCubeInstanceData() const {
   std::vector<Cell::VertexData> instanceData;
   instanceData.reserve(cells_.size() * cells_[0].size() * cells_[0][0].size());
 
-  float spacing = 3.0F;
-
   logzy::info("Creating cube vertex data for {} instances",
               instanceData.capacity());
 
@@ -145,8 +204,7 @@ void Board::updateCubeInstanceData() const {
         }
 
         instanceData.emplace_back(Cell::VertexData{
-            .positionOffset =
-                vec3<float>(x * spacing, y * spacing, z * spacing),
+            .positionOffset = cellPosition(vec3(x, y, z)),
             .color = cell.getColor(),
         });
       }

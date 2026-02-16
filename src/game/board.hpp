@@ -21,11 +21,18 @@ struct Cell {
 
 struct Board {
 
-  void draw(const m4x4f &view, const m4x4f &projection) const;
+public:
+  static constexpr float CELL_SPACING = 3.0f;
 
   [[nodiscard]] static std::optional<Board> create(v3u dimensions);
-
+  void draw(const m4x4f &view, const m4x4f &projection) const;
   void dig(v3u coords) noexcept;
+  [[nodiscard]] bool intersect(v3uz cellCoordiantes, v3f playerPos,
+                               v3f playerDir) const noexcept;
+  constexpr void changeCubeSize(float difference) noexcept;
+  [[nodiscard]] constexpr v3f cellPosition(v3uz cellCoords) const noexcept;
+
+  void testCollisions(v3f playerPos, v3f playerDir);
 
 private:
   // Game related methods
@@ -36,6 +43,10 @@ private:
   bool setupVAO();
   void updateCubeInstanceData() const;
 
+public:
+  float cellSize = 0.35f;
+
+private:
   /// Game data
 
   // Board data
@@ -67,4 +78,16 @@ constexpr v3f Cell::getColor() const noexcept {
   }
   logzy::critical("Unreachable reached.");
   std::unreachable();
+}
+
+constexpr void Board::changeCubeSize(float difference) noexcept {
+  cellSize += difference;
+  updateCubeInstanceData();
+}
+
+[[nodiscard]] constexpr v3f
+Board::cellPosition(v3uz cellCoords) const noexcept {
+  const float cellOffset = cellSize + CELL_SPACING;
+  return vec3<float>(cellCoords.x() * cellOffset, cellCoords.y() * cellOffset,
+                     cellCoords.z() * cellOffset);
 }

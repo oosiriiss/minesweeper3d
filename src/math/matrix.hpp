@@ -29,6 +29,7 @@ using v2d = mat<double, 1, 2>;
 using v3f = mat<float, 1, 3>;
 using v3i = mat<std::int32_t, 1, 3>;
 using v3u = mat<std::uint32_t, 1, 3>;
+using v3uz = mat<size_t, 1, 3>;
 
 // Vector utility specializations
 template <Numeric T> struct mat<T, 1, 2> {

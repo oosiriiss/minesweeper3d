@@ -4,6 +4,7 @@
 #include <logzy/logzy.hpp>
 #include <random>
 
+#include "debug_utils.hpp"
 #include "math/matrix.hpp"
 #include "render/camera.hpp"
 
@@ -19,6 +20,9 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 int main() {
+
+  DEBUG_ONLY(std::println("HELLO!"));
+
   // Initializing glfw
 
   if (!glfwInit()) {
@@ -121,13 +125,32 @@ int main() {
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
       camera.move(Camera::Direction::Down, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_P)) {
-      v3u coords{static_cast<unsigned int>(boardIndexDistribution(rng)),
-                 static_cast<unsigned int>(boardIndexDistribution(rng)),
-                 static_cast<unsigned int>(boardIndexDistribution(rng))};
-
-      board.dig(coords);
+    if (glfwGetKey(window, GLFW_KEY_B)) {
+      board.changeCubeSize(0.01);
+      logzy::debug("Cell size is now: {}", board.cellSize);
     }
+    if (glfwGetKey(window, GLFW_KEY_N)) {
+      board.changeCubeSize(-0.01);
+      logzy::debug("Cell size is now: {}", board.cellSize);
+    }
+    if (glfwGetKey(window, GLFW_KEY_C)) {
+      board.testCollisions(camera.position, camera.direction);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_P)) {
+      logzy::debug("Camera position: {}\nCamera direction: {}\nCell[0][0][0] "
+                   "position: {}",
+                   camera.position, camera.direction,
+                   board.cellPosition(vec3<size_t>(0, 0, 0)));
+    }
+
+    // if (glfwGetKey(window, GLFW_KEY_P)) {
+    //   v3u coords{static_cast<unsigned int>(boardIndexDistribution(rng)),
+    //              static_cast<unsigned int>(boardIndexDistribution(rng)),
+    //              static_cast<unsigned int>(boardIndexDistribution(rng))};
+
+    //  board.dig(coords);
+    //}
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
