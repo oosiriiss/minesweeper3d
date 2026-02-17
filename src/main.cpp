@@ -134,14 +134,14 @@ int main() {
       logzy::debug("Cell size is now: {}", board.cellSize);
     }
     if (glfwGetKey(window, GLFW_KEY_C)) {
-      board.testCollisions(camera.position, camera.direction);
+      board.testCollisions(camera.position, camera.getDirection());
     }
 
     if (glfwGetKey(window, GLFW_KEY_P)) {
       logzy::debug("Camera position: {}\nCamera direction: {}\nCell[0][0][0] "
                    "position: {}",
-                   camera.position, camera.direction,
-                   board.cellPosition(vec3<size_t>(0, 0, 0)));
+                   camera.position, camera.getDirection(),
+                   board.cellCenterPosition(vec3<size_t>(0, 0, 0)));
     }
 
     // if (glfwGetKey(window, GLFW_KEY_P)) {

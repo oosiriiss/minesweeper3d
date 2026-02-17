@@ -10,11 +10,9 @@
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
 
   shaderProgram.use();
-  // TODO :: Cache the location of uniforms
-  shaderProgram.setM4x4(
-      "model",
-      scale(identity<float, 4>(), vec3<float>(cellSize, cellSize, cellSize)));
 
+  // TODO :: Cache the location of uniforms
+  shaderProgram.setFloat("uCellSize", cellSize);
   shaderProgram.setM4x4("view", view);
   shaderProgram.setM4x4("projection", projection);
 
@@ -59,13 +57,14 @@ void Board::dig(v3u coords) noexcept {
 
 [[nodiscard]] bool Board::intersect(v3uz cellCoordiantes, v3f playerPos,
                                     v3f playerDir) const noexcept {
-  v3f pos = cellPosition(cellCoordiantes);
+  v3f pos = cellCenterPosition(cellCoordiantes);
   float tmin = 0.0;
   float tmax = INFINITY;
 
   for (size_t i = 0; i < playerPos.data[0].size(); ++i) {
-    float t1 = (pos.data[0][i] - playerPos.data[0][i]) / playerDir.data[0][i];
-    float t2 = (pos.data[0][i] + cellSize - playerPos.data[0][i]) /
+    float t1 = (pos.data[0][i] - cellSize / 2.0f - playerPos.data[0][i]) /
+               playerDir.data[0][i];
+    float t2 = (pos.data[0][i] + cellSize / 2.0f - playerPos.data[0][i]) /
                playerDir.data[0][i];
 
     tmin = std::max(tmin, std::min(t1, t2));
@@ -91,7 +90,7 @@ void Board::testCollisions(v3f playerPos, v3f playerDir) {
           continue;
         }
 
-        Cell::VertexData vd{.positionOffset = cellPosition(vec3(x, y, z)),
+        Cell::VertexData vd{.positionOffset = cellCenterPosition(vec3(x, y, z)),
                             .color =
                                 (intersect(vec3(x, y, z), playerPos, playerDir))
                                     ? vec3(1.0F, 0.08F, 0.6F)
@@ -99,7 +98,7 @@ void Board::testCollisions(v3f playerPos, v3f playerDir) {
 
         DEBUG_ONLY(if (intersect(vec3(x, y, z), playerPos, playerDir)) {
           logzy::debug("Intersecting with cube[{}][{}][{}], cube position: {}",
-                       z, y, x, cellPosition(vec3(x, y, z)));
+                       z, y, x, cellCenterPosition(vec3(x, y, z)));
         });
 
         instanceData.emplace_back(vd);
@@ -122,6 +121,7 @@ in vec3 vCol;
 in vec3 vPos;
 in vec3 vOffset;
 
+uniform float uCellSize;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
@@ -129,7 +129,8 @@ uniform mat4 projection;
 out vec3 color;
 
 void main() {
-    gl_Position = projection * view * model * vec4(vPos + vOffset, 1.0);
+   vec3 worldPos = (vPos * uCellSize) + vOffset;
+    gl_Position = projection * view * vec4(worldPos,1.0);
     color = vCol;
 };
 )""";
@@ -204,7 +205,7 @@ void Board::updateCubeInstanceData() const {
         }
 
         instanceData.emplace_back(Cell::VertexData{
-            .positionOffset = cellPosition(vec3(x, y, z)),
+            .positionOffset = cellCenterPosition(vec3(x, y, z)),
             .color = cell.getColor(),
         });
       }

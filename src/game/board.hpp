@@ -22,7 +22,7 @@ struct Cell {
 struct Board {
 
 public:
-  static constexpr float CELL_SPACING = 3.0f;
+  static constexpr float CELL_SPACING = 0.1f;
 
   [[nodiscard]] static std::optional<Board> create(v3u dimensions);
   void draw(const m4x4f &view, const m4x4f &projection) const;
@@ -30,7 +30,8 @@ public:
   [[nodiscard]] bool intersect(v3uz cellCoordiantes, v3f playerPos,
                                v3f playerDir) const noexcept;
   constexpr void changeCubeSize(float difference) noexcept;
-  [[nodiscard]] constexpr v3f cellPosition(v3uz cellCoords) const noexcept;
+  [[nodiscard]] constexpr v3f
+  cellCenterPosition(v3uz cellCoords) const noexcept;
 
   void testCollisions(v3f playerPos, v3f playerDir);
 
@@ -44,7 +45,7 @@ private:
   void updateCubeInstanceData() const;
 
 public:
-  float cellSize = 0.35f;
+  float cellSize = 1.0f;
 
 private:
   /// Game data
@@ -86,7 +87,7 @@ constexpr void Board::changeCubeSize(float difference) noexcept {
 }
 
 [[nodiscard]] constexpr v3f
-Board::cellPosition(v3uz cellCoords) const noexcept {
+Board::cellCenterPosition(v3uz cellCoords) const noexcept {
   const float cellOffset = cellSize + CELL_SPACING;
   return vec3<float>(cellCoords.x() * cellOffset, cellCoords.y() * cellOffset,
                      cellCoords.z() * cellOffset);

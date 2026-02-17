@@ -8,7 +8,7 @@ struct Camera {
 
   constexpr Camera(v3f initialPosition, v3f arbitraryUp)
       : position(initialPosition), up(arbitraryUp),
-        right(cross(direction, arbitraryUp)), arbitraryUp(arbitraryUp) {
+        right(cross(reverseDirection, arbitraryUp)), arbitraryUp(arbitraryUp) {
     updateDirection();
   }
 
@@ -24,8 +24,8 @@ struct Camera {
   // Camera world position
   v3f position = vec3<float>(0.0F, 0.0F, 0.0F);
 
-  // Direction the camera is looking at
-  v3f direction = vec3<float>(0.0F, 0.0F, -1.0F);
+  // Reverse of the direction the camera is looking at
+  v3f reverseDirection = vec3<float>(0.0F, 0.0F, -1.0F);
 
   // camera up vector
   v3f up = vec3<float>(0.0F, 1.0F, 0.0F);
@@ -37,8 +37,10 @@ struct Camera {
   v3f arbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
 
   [[nodiscard]] constexpr m4x4f getView() {
-    return lookAt(position, direction, up, right);
+    return lookAt(position, reverseDirection, up, right);
   }
+
+  constexpr v3f getDirection() { return reverseDirection * -1; }
 
   /**
    * Moves the camera by the given delta position
@@ -53,10 +55,10 @@ struct Camera {
       position = position - right * distance;
       break;
     case Direction::Forward:
-      position = position + this->direction * distance;
+      position = position + this->reverseDirection * distance;
       break;
     case Direction::Backward:
-      position = position - this->direction * distance;
+      position = position - this->reverseDirection * distance;
       break;
     case Direction::Up:
       position = position - arbitraryUp * distance;
@@ -87,14 +89,14 @@ struct Camera {
 
 private:
   constexpr void updateDirection() {
-    direction.x() = cos(radians(yaw)) * cos(radians(pitch));
-    direction.y() = sin(radians(pitch));
-    direction.z() = sin(radians(yaw)) * cos(radians(pitch));
+    reverseDirection.x() = cos(radians(yaw)) * cos(radians(pitch));
+    reverseDirection.y() = sin(radians(pitch));
+    reverseDirection.z() = sin(radians(yaw)) * cos(radians(pitch));
 
-    direction = normalize(direction);
+    reverseDirection = normalize(reverseDirection);
 
-    right = normalize(cross(direction, arbitraryUp));
+    right = normalize(cross(reverseDirection, arbitraryUp));
 
-    up = normalize(cross(right, direction));
+    up = normalize(cross(right, reverseDirection));
   }
 };
