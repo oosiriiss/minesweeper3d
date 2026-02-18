@@ -24,4 +24,3 @@ struct AABB {
     return AABB{.origin = centerPosition - (size * 0.5f), .size = size};
   }
 };
-

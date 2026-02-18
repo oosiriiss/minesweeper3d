@@ -54,4 +54,15 @@ constexpr std::array<v3f, 36> CUBE_VERTICES{
     v3f{0.5f, 0.5f, 0.5f}, 
     v3f{0.5f, 0.5f, -0.5f},
 };
+
+constexpr std::array<v2f,6> SQUARE_VERTICES {
+   v2f{-0.5f,-0.5f},
+   v2f{-0.5f,0.5f},
+   v2f{0.5f,0.5f},
+
+   v2f{0.5f,0.5f},
+   v2f{-0.5f,-0.5f},
+   v2f{0.5f,-0.5f},
+};
+
 // clang-format on

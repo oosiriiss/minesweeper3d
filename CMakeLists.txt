@@ -24,6 +24,8 @@ add_executable(
 
    ./src/game/board.cpp
    ./src/game/board.hpp
+   ./src/game/crosshair.cpp
+   ./src/game/crosshair.hpp
 
    ./src/math/math.hpp
    ./src/math/matrix.hpp

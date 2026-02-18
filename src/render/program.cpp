@@ -120,6 +120,34 @@ void Program::setM4x4(const GLint location, const m4x4f &matrix) const {
   glUniformMatrix4fv(location, count, transpose, dataPtrAs<GLfloat>(matrix));
 }
 
+bool Program::setV3f(const std::string &name, v3f value) const {
+
+  auto locOpt = getUniformLocation(name);
+
+  if (!locOpt) {
+    return false;
+  }
+  glUniform3fv(*locOpt, 1, dataPtrAs<GLfloat>(value));
+  return true;
+}
+void Program::setV3f(GLint location, v3f value) const {
+  glUniform3fv(location, 1, dataPtrAs<GLfloat>(value));
+}
+
+bool Program::setV4f(const std::string &name, v4f value) const {
+
+  auto locOpt = getUniformLocation(name);
+
+  if (!locOpt) {
+    return false;
+  }
+  glUniform3fv(*locOpt, 1, dataPtrAs<GLfloat>(value));
+  return true;
+}
+void Program::setV4f(GLint location, v4f value) const {
+  glUniform4fv(location, 1, dataPtrAs<GLfloat>(value));
+}
+
 bool Program::setFloat(const std::string &name, float value) const {
 
   auto locOpt = getUniformLocation(name);

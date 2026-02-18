@@ -16,13 +16,15 @@
                                            float near = 0.1F,
                                            float far = 100.0F) {
 
-  return m4x4f{// clang-format off
+  // TODO :: is this column-major?
+
+  return transpose(m4x4f{// clang-format off
       .data = {std::array<float, 4>{ 2 / (right - left) ,          0.0F         ,         0.0F         , -(right + left) / (right - left) },
                std::array<float, 4>{         0.0F       , 2.0F / (top - bottom) ,         0.0F         , -(top + bottom) / (top - bottom) },
                std::array<float, 4>{         0.0F       ,          0.0F         , -2.0F / (far - near) ,   -(far + near) / (far - near)   },
                std::array<float, 4>{         0.0F       ,          0.0F         ,         0.0F         ,              1.0F                },
-      } };
-               // clang-format on
+      } });
+                         // clang-format on
 }
 
 [[nodiscard]] constexpr m4x4f perspective(float fov = 50.0F,

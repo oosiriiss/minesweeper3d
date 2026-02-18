@@ -26,10 +26,12 @@ using m4x4f = mat<float, 4, 4>;
 using v2i = mat<std::int32_t, 1, 2>;
 using v2f = mat<float, 1, 2>;
 using v2d = mat<double, 1, 2>;
+using v2u = mat<std::uint32_t, 1, 2>;
 using v3f = mat<float, 1, 3>;
 using v3i = mat<std::int32_t, 1, 3>;
 using v3u = mat<std::uint32_t, 1, 3>;
 using v3uz = mat<size_t, 1, 3>;
+using v4f = mat<float, 1, 4>;
 
 // Vector utility specializations
 template <Numeric T> struct mat<T, 1, 2> {
@@ -51,6 +53,21 @@ template <Numeric T> struct mat<T, 1, 3> {
 
   [[nodiscard]] constexpr T &z() { return data[0][2]; }
   [[nodiscard]] constexpr const T &z() const { return data[0][2]; }
+};
+
+template <Numeric T> struct mat<T, 1, 4> {
+  std::array<std::array<T, 4>, 1> data{};
+  [[nodiscard]] constexpr T &x() { return data[0][0]; }
+  [[nodiscard]] constexpr const T &x() const { return data[0][0]; }
+
+  [[nodiscard]] constexpr T &y() { return data[0][1]; }
+  [[nodiscard]] constexpr const T &y() const { return data[0][1]; }
+
+  [[nodiscard]] constexpr T &z() { return data[0][2]; }
+  [[nodiscard]] constexpr const T &z() const { return data[0][2]; }
+
+  [[nodiscard]] constexpr T &w() { return data[0][3]; }
+  [[nodiscard]] constexpr const T &w() const { return data[0][3]; }
 };
 
 template <Numeric NewType, Numeric T, std::size_t Rows, std::size_t Cols>
@@ -114,8 +131,14 @@ template <Numeric T> [[nodiscard]] constexpr mat<T, 1, 2> vec2(T x, T y) {
 template <Numeric T> [[nodiscard]] mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
   return mat<T, 1, 3>{.data = {{x, y, z}}};
 }
+
 template <Numeric T> [[nodiscard]] mat<T, 1, 3> constexpr vec3(T x) {
   return mat<T, 1, 3>{.data = {{x, x, x}}};
+}
+
+template <Numeric T>
+[[nodiscard]] mat<T, 1, 4> constexpr vec4(T x, T y, T z, T w) {
+  return mat<T, 1, 4>{.data = {{x, y, z, w}}};
 }
 
 // Transposition

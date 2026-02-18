@@ -25,6 +25,14 @@ struct Program {
   // Assumes location is valid
   void setM4x4(GLint location, const m4x4f &matrix) const;
 
+  bool setV3f(const std::string &name, v3f value) const;
+  // Assumes location is valid
+  void setV3f(GLint location, v3f value) const;
+
+  bool setV4f(const std::string &name, v4f value) const;
+  // Assumes location is valid
+  void setV4f(GLint location, v4f value) const;
+
   bool setFloat(const std::string &name, float value) const;
   // Assumes location is valid
   void setFloat(GLint location, float value) const;

@@ -1,10 +1,12 @@
 #include "game/board.hpp"
+#include "game/crosshair.hpp"
 #include "glad.h"
 #include <GLFW/glfw3.h>
 #include <logzy/logzy.hpp>
 #include <random>
 
 #include "debug_utils.hpp"
+#include "math/math.hpp"
 #include "math/matrix.hpp"
 #include "render/camera.hpp"
 
@@ -21,6 +23,8 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 
 int main() {
 
+  // TODO :: resizing
+
   DEBUG_ONLY(std::println("HELLO!"));
 
   // Initializing glfw
@@ -34,8 +38,11 @@ int main() {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLFWwindow *window =
-      glfwCreateWindow(800, 800, "My window", nullptr, nullptr);
+  constexpr std::uint32_t SCREEN_WIDTH = 800;
+  constexpr std::uint32_t SCREEN_HEIGHT = 800;
+
+  GLFWwindow *window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT,
+                                        "My window", nullptr, nullptr);
 
   if (!window) {
     logzy::critical("Couldn't create GLFW window\n");
@@ -81,6 +88,10 @@ int main() {
   glfwGetCursorPos(window, &(mousePos.data[0][0]), &(mousePos.data[0][1]));
 
   double lastTime = glfwGetTime();
+
+  // HUD
+  Crosshair crosshair(vec2(SCREEN_WIDTH, SCREEN_HEIGHT), vec2(10u, 10u),
+                      vec3(0.0f, 0.0f, 1.0f));
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
@@ -144,14 +155,6 @@ int main() {
                    board.cellCenterPosition(vec3<size_t>(0, 0, 0)));
     }
 
-    // if (glfwGetKey(window, GLFW_KEY_P)) {
-    //   v3u coords{static_cast<unsigned int>(boardIndexDistribution(rng)),
-    //              static_cast<unsigned int>(boardIndexDistribution(rng)),
-    //              static_cast<unsigned int>(boardIndexDistribution(rng))};
-
-    //  board.dig(coords);
-    //}
-
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
@@ -165,12 +168,23 @@ int main() {
     constexpr float fov = 50.0f;
     constexpr float near = 0.01f;
     constexpr float far = 100.0f;
-    auto p = perspective(fov, ratio, near, far);
+    auto persp = perspective(fov, ratio, near, far);
 
-    board.draw(v, p);
+    board.draw(v, persp);
 
     // Drawing ui
+    // Static ui doesnt need depth
+    glDisable(GL_DEPTH_TEST);
+
+    auto ortho = orthographic(0.0f, SCREEN_WIDTH, 0.0F, SCREEN_HEIGHT, -1.0f);
+
+    //
     // Crosshair
+
+    crosshair.draw(ortho);
+
+    // Resetting depth test
+    glEnable(GL_DEPTH_TEST);
 
     glfwSwapBuffers(window);
   }
