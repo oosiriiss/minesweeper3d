@@ -27,8 +27,6 @@ public:
   [[nodiscard]] static std::optional<Board> create(v3u dimensions);
   void draw(const m4x4f &view, const m4x4f &projection) const;
   void dig(v3u coords) noexcept;
-  [[nodiscard]] bool intersect(v3uz cellCoordiantes, v3f playerPos,
-                               v3f playerDir) const noexcept;
   constexpr void changeCubeSize(float difference) noexcept;
   [[nodiscard]] constexpr v3f
   cellCenterPosition(v3uz cellCoords) const noexcept;

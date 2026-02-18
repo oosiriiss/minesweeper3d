@@ -2,6 +2,7 @@
 #include "board.hpp"
 #include "debug_utils.hpp"
 #include "glad.h"
+#include "math/intersections.hpp"
 #include "math/math.hpp"
 #include "render/mesh.hpp"
 #include <cassert>
@@ -52,25 +53,8 @@ void Board::generateBoard(const v3u dimensions) {
 
 void Board::dig(v3u coords) noexcept {
   cells_[coords.z()][coords.y()][coords.x()].isDug = true;
+  // TODO :: (Performance)  Updating every cube, even those that didn't change
   updateCubeInstanceData();
-}
-
-[[nodiscard]] bool Board::intersect(v3uz cellCoordiantes, v3f playerPos,
-                                    v3f playerDir) const noexcept {
-  v3f pos = cellCenterPosition(cellCoordiantes);
-  float tmin = 0.0;
-  float tmax = INFINITY;
-
-  for (size_t i = 0; i < playerPos.data[0].size(); ++i) {
-    float t1 = (pos.data[0][i] - cellSize / 2.0f - playerPos.data[0][i]) /
-               playerDir.data[0][i];
-    float t2 = (pos.data[0][i] + cellSize / 2.0f - playerPos.data[0][i]) /
-               playerDir.data[0][i];
-
-    tmin = std::max(tmin, std::min(t1, t2));
-    tmax = std::min(tmax, std::max(t1, t2));
-  }
-  return tmin < tmax;
 }
 
 void Board::testCollisions(v3f playerPos, v3f playerDir) {
@@ -90,13 +74,19 @@ void Board::testCollisions(v3f playerPos, v3f playerDir) {
           continue;
         }
 
-        Cell::VertexData vd{.positionOffset = cellCenterPosition(vec3(x, y, z)),
-                            .color =
-                                (intersect(vec3(x, y, z), playerPos, playerDir))
-                                    ? vec3(1.0F, 0.08F, 0.6F)
-                                    : vec3(0.1f, 0.1f, 0.1f)};
+        v3f cellCenter = cellCenterPosition(vec3(x, y, z));
 
-        DEBUG_ONLY(if (intersect(vec3(x, y, z), playerPos, playerDir)) {
+        Cell::VertexData vd{
+            .positionOffset = cellCenter,
+            .color =
+                (doesIntersect(Ray{.origin = playerPos, .direction = playerDir},
+                               AABB::fromCenterIn(cellCenter, vec3(cellSize))))
+                    ? vec3(1.0f, 0.08f, 0.6f)
+                    : cell.getColor()};
+
+        DEBUG_ONLY(if (doesIntersect(
+                           Ray{.origin = playerPos, .direction = playerDir},
+                           AABB::fromCenterIn(cellCenter, vec3(cellSize)))) {
           logzy::debug("Intersecting with cube[{}][{}][{}], cube position: {}",
                        z, y, x, cellCenterPosition(vec3(x, y, z)));
         });

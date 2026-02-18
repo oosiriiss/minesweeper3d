@@ -169,6 +169,9 @@ int main() {
 
     board.draw(v, p);
 
+    // Drawing ui
+    // Crosshair
+
     glfwSwapBuffers(window);
   }
 

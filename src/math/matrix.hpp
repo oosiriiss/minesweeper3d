@@ -114,6 +114,9 @@ template <Numeric T> [[nodiscard]] constexpr mat<T, 1, 2> vec2(T x, T y) {
 template <Numeric T> [[nodiscard]] mat<T, 1, 3> constexpr vec3(T x, T y, T z) {
   return mat<T, 1, 3>{.data = {{x, y, z}}};
 }
+template <Numeric T> [[nodiscard]] mat<T, 1, 3> constexpr vec3(T x) {
+  return mat<T, 1, 3>{.data = {{x, x, x}}};
+}
 
 // Transposition
 template <Numeric T, std::size_t Rows, std::size_t Cols>
