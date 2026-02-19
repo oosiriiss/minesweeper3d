@@ -222,26 +222,45 @@ operator-(const mat<T, Rows, Cols> &f, const mat<T, Rows, Cols> &s) {
   return out;
 }
 
+template <Numeric T, std::size_t Rows, std::size_t Cols>
+[[nodiscard]] constexpr bool operator==(const mat<T, Rows, Cols> &f,
+                                        const mat<T, Rows, Cols> &s) {
+
+  for (std::size_t i = 0; i < f.data.size(); ++i) {
+    for (std::size_t j = 0; j < f.data[i].size(); ++j) {
+      if (f.data[i][j] != s.data[i][j]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 ///////////////////////
 // Vector operations //
 ///////////////////////
+
+template <Numeric T, std::size_t Cols>
+[[nodiscard]] constexpr T length(const mat<T, 1, Cols> &vec) {
+  const T squareSum =
+      std::accumulate(vec.data[0].begin(), vec.data[0].end(), static_cast<T>(0),
+                      [](T sum, T number) { return sum + (number * number); });
+
+  return sqrt(squareSum);
+}
 
 /**
  * Normalizes the vector
  */
 template <Numeric T, std::size_t Cols>
 [[nodiscard]] constexpr mat<T, 1, Cols> normalize(const mat<T, 1, Cols> &vec) {
-
-  const T squareSum =
-      std::accumulate(vec.data[0].begin(), vec.data[0].end(), static_cast<T>(0),
-                      [](T sum, T number) { return sum + (number * number); });
-
-  const T length = sqrt(squareSum);
+  const T len = length(vec);
 
   mat<T, 1, Cols> out;
 
   for (std::size_t i = 0; i < out.data[0].size(); ++i) {
-    out.data[0][i] = vec.data[0][i] / length;
+    out.data[0][i] = vec.data[0][i] / len;
   }
 
   return out;

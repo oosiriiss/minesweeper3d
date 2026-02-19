@@ -4,8 +4,12 @@
 #include "glad.h"
 #include "math/intersections.hpp"
 #include "math/math.hpp"
+#include "math/matrix.hpp"
 #include "render/mesh.hpp"
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <limits>
 #include <logzy/logzy.hpp>
 
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
@@ -27,6 +31,59 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   std::size_t instances =
       cells_.size() * cells_[0].size() * cells_[0][0].size();
   glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(), instances);
+}
+
+void Board::onClick(v3f playerPos, v3f playerDir) noexcept {
+
+  std::optional targetedCoordinates = getPointedCell(playerPos, playerDir);
+  if (!targetedCoordinates) {
+    return;
+  }
+
+  dig(*targetedCoordinates);
+}
+
+[[nodiscard]] std::optional<v3uz>
+Board::getPointedCell(v3f playerPos, v3f playerDir) const noexcept {
+
+  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
+         "Board is generated and has least one cell.");
+
+  std::optional<v3uz> pointedCell;
+  float minDistance = std::numeric_limits<float>::infinity();
+
+  for (std::size_t z = 0; z < cells_.size(); ++z) {
+    for (std::size_t y = 0; y < cells_[z].size(); ++y) {
+      for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
+        const Cell &cell = cells_[z][y][x];
+
+        // Dug cells are "transparent"
+        if (cell.isDug) {
+          continue;
+        }
+
+        v3f cellCenter = cellCenterPosition(vec3(x, y, z));
+        float currentDistance = length(cellCenter - playerPos);
+
+        // Cell is further than closest, so dont bother checking if it
+        // intersects
+        if (pointedCell && currentDistance >= minDistance) {
+          continue;
+        }
+
+        // Collision check
+        if (!doesIntersect(Ray{.origin = playerPos, .direction = playerDir},
+                           AABB::fromCenterIn(cellCenter, vec3(cellSize)))) {
+          continue;
+        }
+
+        pointedCell.emplace(vec3(x, y, z));
+        minDistance = currentDistance;
+      }
+    }
+  }
+
+  return pointedCell;
 }
 
 void Board::generateBoard(const v3u dimensions) {
@@ -51,58 +108,11 @@ void Board::generateBoard(const v3u dimensions) {
   }
 }
 
-void Board::dig(v3u coords) noexcept {
+void Board::dig(v3uz coords) noexcept {
   cells_[coords.z()][coords.y()][coords.x()].isDug = true;
-  // TODO :: (Performance)  Updating every cube, even those that didn't change
+  // TODO :: (Performance)  Updating every cube, even those that didn't
+  // change
   updateCubeInstanceData();
-}
-
-void Board::testCollisions(v3f playerPos, v3f playerDir) {
-
-  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
-         "Board is generated and has least one cell.");
-
-  std::vector<Cell::VertexData> instanceData;
-  instanceData.reserve(cells_.size() * cells_[0].size() * cells_[0][0].size());
-
-  for (std::size_t z = 0; z < cells_.size(); ++z) {
-    for (std::size_t y = 0; y < cells_[z].size(); ++y) {
-      for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
-        const Cell &cell = cells_[z][y][x];
-
-        if (cell.isDug) {
-          continue;
-        }
-
-        v3f cellCenter = cellCenterPosition(vec3(x, y, z));
-
-        Cell::VertexData vd{
-            .positionOffset = cellCenter,
-            .color =
-                (doesIntersect(Ray{.origin = playerPos, .direction = playerDir},
-                               AABB::fromCenterIn(cellCenter, vec3(cellSize))))
-                    ? vec3(1.0f, 0.08f, 0.6f)
-                    : cell.getColor()};
-
-        DEBUG_ONLY(if (doesIntersect(
-                           Ray{.origin = playerPos, .direction = playerDir},
-                           AABB::fromCenterIn(cellCenter, vec3(cellSize)))) {
-          logzy::debug("Intersecting with cube[{}][{}][{}], cube position: {}",
-                       z, y, x, cellCenterPosition(vec3(x, y, z)));
-        });
-
-        instanceData.emplace_back(vd);
-      }
-    }
-  }
-
-  // Uploading the data to GPU
-  const std::size_t instanceDataSizeBytes =
-      instanceData.size() * sizeof(instanceData[0]);
-
-  glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
-  glBufferData(GL_ARRAY_BUFFER, instanceDataSizeBytes, instanceData.data(),
-               GL_DYNAMIC_DRAW);
 }
 
 constexpr static std::string_view vertexShaderText = R"""(
@@ -174,7 +184,7 @@ void Board::loadCubeMesh(const std::span<const v3f> mesh) {
   glBufferData(GL_ARRAY_BUFFER, meshSizeBytes, mesh.data(), GL_STATIC_DRAW);
 }
 
-void Board::updateCubeInstanceData() const {
+void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) const {
 
   assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
          "Board is generated and has least one cell.");
@@ -189,15 +199,15 @@ void Board::updateCubeInstanceData() const {
     for (std::size_t y = 0; y < cells_[z].size(); ++y) {
       for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
         const Cell &cell = cells_[z][y][x];
-
         if (cell.isDug) {
           continue;
         }
 
-        instanceData.emplace_back(Cell::VertexData{
-            .positionOffset = cellCenterPosition(vec3(x, y, z)),
-            .color = cell.getColor(),
-        });
+        v3f color = (vec3(x, y, z) == pointedCellCoordiantes)
+                        ? vec3(1.0f, 0.08f, 0.6f)
+                        : cell.getColor();
+
+        instanceData.emplace_back(cellCenterPosition(vec3(x, y, z)), color);
       }
     }
   }

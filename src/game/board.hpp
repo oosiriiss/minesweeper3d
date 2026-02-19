@@ -26,21 +26,29 @@ public:
 
   [[nodiscard]] static std::optional<Board> create(v3u dimensions);
   void draw(const m4x4f &view, const m4x4f &projection) const;
-  void dig(v3u coords) noexcept;
+  void dig(v3uz coords) noexcept;
   constexpr void changeCubeSize(float difference) noexcept;
   [[nodiscard]] constexpr v3f
   cellCenterPosition(v3uz cellCoords) const noexcept;
 
-  void testCollisions(v3f playerPos, v3f playerDir);
+  void onClick(v3f playerPos, v3f playerDir) noexcept;
 
 private:
+  /**
+   * Returns the {x,y,z} indicating cell's position in internal cells_
+   * vector[z][y][x]
+   */
+  [[nodiscard]] std::optional<v3uz>
+  getPointedCell(v3f playerPos, v3f playerDir) const noexcept;
+
   // Game related methods
   void generateBoard(const v3u dimensions);
 
   // Render related methods
   void loadCubeMesh(const std::span<const v3f> mesh);
   bool setupVAO();
-  void updateCubeInstanceData() const;
+  void
+  updateCubeInstanceData(v3uz pointedCellCoordiantes = vec3<size_t>(-1)) const;
 
 public:
   float cellSize = 1.0f;

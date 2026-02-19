@@ -79,7 +79,7 @@ int main() {
   constexpr v3f cameraInitialPosition = vec3<float>(.0F, .0F, 20.0F);
   constexpr v3f cameraArbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
   constexpr float cameraSpeed = 10.0F;
-  constexpr float horizontalSensitivity = 0.8f;
+  constexpr float horizontalSensitivity = 0.5f;
   constexpr float verticalSensitivity = horizontalSensitivity / 1.5f;
 
   Camera camera(cameraInitialPosition, cameraArbitraryUp);
@@ -93,6 +93,7 @@ int main() {
   Crosshair crosshair(vec2(SCREEN_WIDTH, SCREEN_HEIGHT), vec2(10u, 10u),
                       vec3(0.0f, 0.0f, 1.0f));
 
+  bool lastLMBPressed = false;
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -103,6 +104,12 @@ int main() {
     glfwGetCursorPos(window, &(newMousePos.data[0][0]),
                      &(newMousePos.data[0][1]));
     v2d mouseDelta = newMousePos - mousePos;
+
+    // Handling mouse buttons
+    bool LMBPressed =
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    bool LMBReleased = lastLMBPressed && !LMBPressed;
+    lastLMBPressed = LMBPressed;
 
     // TODO :: Investigate why does yaw have to be negated in order to rotate
     // in the right direction
@@ -144,8 +151,8 @@ int main() {
       board.changeCubeSize(-0.01);
       logzy::debug("Cell size is now: {}", board.cellSize);
     }
-    if (glfwGetKey(window, GLFW_KEY_C)) {
-      board.testCollisions(camera.position, camera.getDirection());
+    if (LMBReleased) {
+      board.onClick(camera.position, camera.getDirection());
     }
 
     if (glfwGetKey(window, GLFW_KEY_P)) {

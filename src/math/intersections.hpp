@@ -14,12 +14,6 @@
   constexpr size_t dimensions = 3;
 
   for (size_t dim{0uz}; dim < dimensions; ++dim) {
-
-    // Parallel or nearly parallel to the axis
-    if (ray.direction.data[0][dim] < std::numeric_limits<float>::epsilon()) {
-    }
-
-    DEBUG_ASSERT(ray.direction.data[0][dim] != 0.0f);
     float dirRe = 1.0f / ray.direction.data[0][dim];
 
     float tMinHit = (box.origin.data[0][dim] - ray.origin.data[0][dim]) * dirRe;
