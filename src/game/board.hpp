@@ -8,8 +8,11 @@
 
 struct Cell {
 
+  enum class State : std::uint8_t { Default, Dug, Flagged };
+
   std::uint8_t bombsAround{0};
-  bool isDug{false};
+  State state{State::Default};
+  bool isBomb{false};
 
   struct VertexData {
     v3f positionOffset;
@@ -27,11 +30,13 @@ public:
   [[nodiscard]] static std::optional<Board> create(v3u dimensions);
   void draw(const m4x4f &view, const m4x4f &projection) const;
   void dig(v3uz coords) noexcept;
+  void flag(v3uz coords) noexcept;
   constexpr void changeCubeSize(float difference) noexcept;
   [[nodiscard]] constexpr v3f
   cellCenterPosition(v3uz cellCoords) const noexcept;
 
-  void onClick(v3f playerPos, v3f playerDir) noexcept;
+  void onLeftClick(v3f playerPos, v3f playerDir) noexcept;
+  void onRightClick(v3f playerPos, v3f playerDir) noexcept;
 
 private:
   /**
@@ -71,9 +76,13 @@ private:
 };
 
 constexpr v3f Cell::getColor() const noexcept {
+  if (state == Cell::State::Flagged) {
+    return Color::Purple;
+  }
+
   switch (bombsAround) {
   case 0:
-    return Color::White;
+    return Color::Gray;
   case 1:
     return Color::Green;
   case 2:
@@ -98,3 +107,26 @@ Board::cellCenterPosition(v3uz cellCoords) const noexcept {
   return vec3<float>(cellCoords.x() * cellOffset, cellCoords.y() * cellOffset,
                      cellCoords.z() * cellOffset);
 }
+
+#include <format>
+#include <unordered_map>
+
+template <> struct std::formatter<Cell::State, char> {
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    return ctx.begin();
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(const Cell::State state, FmtContext &ctx) const {
+
+    static std::unordered_map<Cell::State, const char *> mappings{
+        {Cell::State::Default, "Default"},
+        {Cell::State::Dug, "Dug"},
+        {Cell::State::Flagged, "Flagged"},
+    };
+
+    return std::format_to(ctx.out(), "{}", mappings[state]);
+  }
+};

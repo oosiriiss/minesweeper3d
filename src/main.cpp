@@ -94,6 +94,7 @@ int main() {
                       vec3(0.0f, 0.0f, 1.0f));
 
   bool lastLMBPressed = false;
+  bool lastRMBPressed = false;
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -110,6 +111,11 @@ int main() {
         glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
     bool LMBReleased = lastLMBPressed && !LMBPressed;
     lastLMBPressed = LMBPressed;
+
+    bool RMBPressed =
+        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    bool RMBReleased = lastRMBPressed && !RMBPressed;
+    lastRMBPressed = RMBPressed;
 
     // TODO :: Investigate why does yaw have to be negated in order to rotate
     // in the right direction
@@ -151,8 +157,13 @@ int main() {
       board.changeCubeSize(-0.01);
       logzy::debug("Cell size is now: {}", board.cellSize);
     }
+
     if (LMBReleased) {
-      board.onClick(camera.position, camera.getDirection());
+      board.onLeftClick(camera.position, camera.getDirection());
+    }
+
+    if (RMBReleased) {
+      board.onRightClick(camera.position, camera.getDirection());
     }
 
     if (glfwGetKey(window, GLFW_KEY_P)) {

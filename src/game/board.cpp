@@ -3,12 +3,9 @@
 #include "debug_utils.hpp"
 #include "glad.h"
 #include "math/intersections.hpp"
-#include "math/math.hpp"
 #include "math/matrix.hpp"
 #include "render/mesh.hpp"
-#include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <limits>
 #include <logzy/logzy.hpp>
 
@@ -33,7 +30,7 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(), instances);
 }
 
-void Board::onClick(v3f playerPos, v3f playerDir) noexcept {
+void Board::onLeftClick(v3f playerPos, v3f playerDir) noexcept {
 
   std::optional targetedCoordinates = getPointedCell(playerPos, playerDir);
   if (!targetedCoordinates) {
@@ -41,6 +38,15 @@ void Board::onClick(v3f playerPos, v3f playerDir) noexcept {
   }
 
   dig(*targetedCoordinates);
+}
+
+void Board::onRightClick(v3f playerPos, v3f playerDir) noexcept {
+  std::optional targetedCoordinates = getPointedCell(playerPos, playerDir);
+  if (!targetedCoordinates) {
+    return;
+  }
+
+  flag(*targetedCoordinates);
 }
 
 [[nodiscard]] std::optional<v3uz>
@@ -58,7 +64,7 @@ Board::getPointedCell(v3f playerPos, v3f playerDir) const noexcept {
         const Cell &cell = cells_[z][y][x];
 
         // Dug cells are "transparent"
-        if (cell.isDug) {
+        if (cell.state == Cell::State::Dug) {
           continue;
         }
 
@@ -108,10 +114,71 @@ void Board::generateBoard(const v3u dimensions) {
   }
 }
 
+static constexpr bool
+withinBoard(std::vector<std::vector<std::vector<Cell>>> &cells, size_t x,
+            size_t y, size_t z) noexcept {
+  // size_t is always >= 0, so skipping that check
+  return x < cells[0][0].size() && y < cells[0].size() && z < cells.size();
+}
+
+static constexpr void digDFS(std::vector<std::vector<std::vector<Cell>>> &cells,
+                             size_t x, size_t y, size_t z) noexcept {
+  auto &cell = cells[z][y][x];
+  DEBUG_ASSERT(cell.state == Cell::State::Default,
+               "Passed coordiantes shouldn't be dug or flagged "
+               "(==Cell::State::Default)");
+
+  cells[z][y][x].state = Cell::State::Dug;
+
+  if (cell.bombsAround > 0 || cell.isBomb) {
+    return;
+  }
+
+  for (int dz = -1; dz < 2; ++dz) {
+    for (int dy = -1; dy < 2; ++dy) {
+      for (int dx = -1; dx < 2; ++dx) {
+        if (dz == 0 && dy == 0 && dx == 0) [[unlikely]] {
+          continue;
+        }
+        size_t newX = x + dx;
+        size_t newY = y + dy;
+        size_t newZ = z + dz;
+
+        if (withinBoard(cells, newX, newY, newZ) &&
+            cells[newZ][newY][newX].state == Cell::State::Default) {
+          digDFS(cells, newX, newY, newZ);
+        }
+      }
+    }
+  }
+}
+
 void Board::dig(v3uz coords) noexcept {
-  cells_[coords.z()][coords.y()][coords.x()].isDug = true;
+  digDFS(cells_, coords.x(), coords.y(), coords.z());
+
   // TODO :: (Performance)  Updating every cube, even those that didn't
   // change
+  updateCubeInstanceData();
+}
+
+void Board::flag(v3uz coords) noexcept {
+
+  DEBUG_ASSERT(cells_[coords.z()][coords.y()][coords.x()].state !=
+                   Cell::State::Dug,
+               "Cell that is dug cannot be flagged");
+
+  auto &cell = cells_[coords.z()][coords.y()][coords.x()];
+
+  Cell::State newState = (cell.state == Cell::State::Flagged)
+                             ? Cell::State::Default
+                             : Cell::State::Flagged;
+
+  cell.state = newState;
+  logzy::debug("Changed flagged state of cell at: {} to: {}", coords, newState);
+
+  // TODO :: (Performance)  Updating every cube, even those that didn't
+  // change Flagging is really only related to one cube so there shoulnd't be
+  // any problem to add this
   updateCubeInstanceData();
 }
 
@@ -199,14 +266,23 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) const {
     for (std::size_t y = 0; y < cells_[z].size(); ++y) {
       for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
         const Cell &cell = cells_[z][y][x];
-        if (cell.isDug) {
+
+        if (cell.state == Cell::State::Dug) {
           continue;
         }
 
-        v3f color = (vec3(x, y, z) == pointedCellCoordiantes)
-                        ? vec3(1.0f, 0.08f, 0.6f)
-                        : cell.getColor();
+        // TODO :: Ia cell is dug but it has bombAround > 0 and it is next to a
+        // cell that is not dug it should be still visible, maybe with low
+        // alpha. OTherwise it would be imposible to win
 
+        bool doHighlight = (vec3(x, y, z) == pointedCellCoordiantes) &&
+                           cell.state != Cell::State::Flagged;
+        constexpr auto highlightColor = vec3(1.0f, 0.08f, 0.6f);
+
+        v3f color = (doHighlight) ? highlightColor : cell.getColor();
+
+        DEBUG_ASSERT(cell.state != Cell::State::Dug,
+                     "Shoulnd't add dug cube coordinates");
         instanceData.emplace_back(cellCenterPosition(vec3(x, y, z)), color);
       }
     }
