@@ -1,13 +1,16 @@
-
 #include "board.hpp"
+
+#include <cassert>
+#include <limits>
+#include <logzy/logzy.hpp>
+#include <ranges>
+
 #include "debug_utils.hpp"
 #include "glad.h"
 #include "math/intersections.hpp"
 #include "math/matrix.hpp"
+#include "math/random.hpp"
 #include "render/mesh.hpp"
-#include <cassert>
-#include <limits>
-#include <logzy/logzy.hpp>
 
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
 
@@ -92,33 +95,70 @@ Board::getPointedCell(v3f playerPos, v3f playerDir) const noexcept {
   return pointedCell;
 }
 
-void Board::generateBoard(const v3u dimensions) {
-
-  const std::size_t cellCount =
-      dimensions.x() + dimensions.y() + dimensions.z();
-
-  cells_.clear();
-  cells_ = std::vector(
-      dimensions.x(),
-      std::vector(dimensions.y(), std::vector<Cell>(dimensions.z(), Cell{})));
-
-  for (std::int32_t z = 0; z < dimensions.z(); ++z) {
-    for (std::int32_t y = 0; y < dimensions.y(); ++y) {
-      for (std::int32_t x = 0; x < dimensions.x(); ++x) {
-        std::uint8_t bombs = z % 5;
-
-        cells_[z][y][x] =
-            (Cell{.bombsAround = static_cast<std::uint8_t>(x % 5)});
-      }
-    }
-  }
-}
-
 static constexpr bool
 withinBoard(std::vector<std::vector<std::vector<Cell>>> &cells, size_t x,
             size_t y, size_t z) noexcept {
   // size_t is always >= 0, so skipping that check
   return x < cells[0][0].size() && y < cells[0].size() && z < cells.size();
+}
+
+constexpr static void
+markBomb(std::vector<std::vector<std::vector<Cell>>> &cells, size_t x, size_t y,
+         size_t z) noexcept {
+
+  cells[z][y][x].isBomb = true;
+
+  // Marking adjacent cells
+  for (int dz = -1; dz < 2; ++dz) {
+    for (int dy = -1; dy < 2; ++dy) {
+      for (int dx = -1; dx < 2; ++dx) {
+        if (dz == 0 && dy == 0 && dx == 0) [[unlikely]] {
+          continue;
+        }
+        size_t newX = x + dx;
+        size_t newY = y + dy;
+        size_t newZ = z + dz;
+        if (withinBoard(cells, newX, newY, newZ)) {
+          ++cells[newZ][newY][newX].bombsAround;
+        }
+      }
+    }
+  }
+}
+
+[[nodiscard]] std::vector<std::vector<std::vector<Cell>>>
+Board::generateBoard(const v3uz dimensions, std::uint32_t bombs) {
+  logzy::debug("Creating board");
+
+  // TODO :: ?Performance? check if size_t which is more than enough isn't
+  // impacting performance because of its size.
+  // TODO :: Performance Currently z*x*y could be really huge, and we really
+  // only need a small fraction of that. There should be a better way to
+  // generate board
+
+  auto cells = std::vector(
+      dimensions.x(),
+      std::vector(dimensions.y(), std::vector<Cell>(dimensions.z(), Cell{})));
+
+  const std::size_t cellCount =
+      dimensions.x() * dimensions.y() * dimensions.z();
+
+  logzy::debug("Generating random bomb positions");
+  std::vector<size_t> bombIndices = randomUniqueRange(0uz, cellCount - 1);
+
+  logzy::debug("Placing bombs {} at generated positions", bombs);
+
+  logzy::debug("Bomb positions: {}", bombIndices);
+
+  for (size_t index : bombIndices | std::views::take(bombs)) {
+    size_t x = index % dimensions.x();
+    size_t y = (index / dimensions.x()) % dimensions.y();
+    size_t z = (index / (dimensions.x() * dimensions.y())) % dimensions.z();
+    markBomb(cells, x, y, z);
+  }
+  logzy::debug("Board created");
+
+  return cells;
 }
 
 static constexpr void digDFS(std::vector<std::vector<std::vector<Cell>>> &cells,
@@ -213,12 +253,13 @@ void main() {
 };
 )""";
 
-[[nodiscard]] std::optional<Board> Board::create(const v3u dimensions) {
+[[nodiscard]] std::optional<Board> Board::create(const v3uz dimensions) {
 
   std::optional<Board> board(Board{});
 
   board->loadCubeMesh(std::span{CUBE_VERTICES});
-  board->generateBoard(dimensions);
+  std::uint32_t bombs = 20;
+  board->cells_ = generateBoard(dimensions, bombs);
 
   glGenBuffers(1, &board->cellInstanceBufferID);
   board->updateCubeInstanceData();

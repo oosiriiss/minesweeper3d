@@ -27,7 +27,7 @@ struct Board {
 public:
   static constexpr float CELL_SPACING = 0.1f;
 
-  [[nodiscard]] static std::optional<Board> create(v3u dimensions);
+  [[nodiscard]] static std::optional<Board> create(v3uz dimensions);
   void draw(const m4x4f &view, const m4x4f &projection) const;
   void dig(v3uz coords) noexcept;
   void flag(v3uz coords) noexcept;
@@ -47,7 +47,8 @@ private:
   getPointedCell(v3f playerPos, v3f playerDir) const noexcept;
 
   // Game related methods
-  void generateBoard(const v3u dimensions);
+  [[nodiscard]] static std::vector<std::vector<std::vector<Cell>>>
+  generateBoard(const v3uz dimensions, std::uint32_t bombs);
 
   // Render related methods
   void loadCubeMesh(const std::span<const v3f> mesh);
@@ -60,10 +61,11 @@ public:
 
 private:
   /// Game data
+  std::uint32_t bombsLeft = 0;
 
   // Board data
   // Accessed like: Board[z][y][x]
-  // TODO :: Maybe convert this 3D vector to a linear vector.
+  // TODO :: Abstract this
   std::vector<std::vector<std::vector<Cell>>> cells_;
 
   /// Render data
@@ -79,6 +81,9 @@ constexpr v3f Cell::getColor() const noexcept {
   if (state == Cell::State::Flagged) {
     return Color::Purple;
   }
+  if (isBomb) {
+    return Color::DarkGray;
+  }
 
   switch (bombsAround) {
   case 0:
@@ -89,7 +94,7 @@ constexpr v3f Cell::getColor() const noexcept {
     return Color::Yellow;
   case 3:
     return Color::Orange;
-  case 4:
+  default: // bombs >= 4
     return Color::Red;
   }
   logzy::critical("Unreachable reached.");

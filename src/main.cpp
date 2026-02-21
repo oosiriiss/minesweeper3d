@@ -62,9 +62,9 @@ int main() {
 
   Board board;
 
-  constexpr std::uint32_t BOARD_SIZE{10};
+  constexpr size_t BOARD_SIZE{10};
 
-  if (auto boardOpt = Board::create(v3u{BOARD_SIZE, BOARD_SIZE, BOARD_SIZE})) {
+  if (auto boardOpt = Board::create(v3uz{BOARD_SIZE, BOARD_SIZE, BOARD_SIZE})) {
     board = std::move(*boardOpt);
   } else {
     logzy::critical("Couldn't create board");
