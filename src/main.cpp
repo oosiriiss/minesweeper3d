@@ -2,8 +2,10 @@
 #include "game/crosshair.hpp"
 #include "glad.h"
 #include <GLFW/glfw3.h>
+#include <chrono>
 #include <logzy/logzy.hpp>
 #include <random>
+#include <thread>
 
 #include "debug_utils.hpp"
 #include "math/math.hpp"
@@ -59,6 +61,11 @@ int main() {
   gladLoadGL(glfwGetProcAddress);
   glfwSwapInterval(1);
   glEnable(GL_DEPTH_TEST);
+
+  // Enable color alpha channel blending
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+  glClearColor(0.0, 0.0, 0.0, 0.0);
 
   Board board;
 
@@ -156,6 +163,10 @@ int main() {
     if (glfwGetKey(window, GLFW_KEY_N)) {
       board.changeCubeSize(-0.01);
       logzy::debug("Cell size is now: {}", board.cellSize);
+    }
+    if (glfwGetKey(window, GLFW_KEY_T)) {
+      board.toggleDrawNeighbours(!board.drawDugAdjacent);
+      std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
     if (LMBReleased) {

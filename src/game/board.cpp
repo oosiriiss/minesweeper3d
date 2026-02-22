@@ -14,6 +14,10 @@
 
 void Board::draw(const m4x4f &view, const m4x4f &projection) const {
 
+  DEBUG_ASSERT(cells_.size() > 0 && cells_[0].size() > 0 &&
+                   cells_[0][0].size() > 0,
+               "Board is generated and has least one cell.");
+
   shaderProgram.use();
 
   // TODO :: Cache the location of uniforms
@@ -21,16 +25,24 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   shaderProgram.setM4x4("view", view);
   shaderProgram.setM4x4("projection", projection);
 
-  glBindVertexArray(vertexArrayID);
+  if (opaqueInstancesToDraw > 0) {
+    glBindVertexArray(opaqueVertexArrayID);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(),
+                          opaqueInstancesToDraw);
+  }
 
-  assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
-         "Board is generated and has least one cell.");
+  if (transparentInstancesToDraw > 0) {
+    // Transparent cubes are split into separate buffer to make the alpha
+    // blending work correct and to avoid depth sorting.
+    // TODO :: Is this "dirty"?
+    glDepthMask(GL_FALSE);
 
-  // Assuming cells_ is a cube where each dimension has the same amount of
-  // objects
-  std::size_t instances =
-      cells_.size() * cells_[0].size() * cells_[0][0].size();
-  glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(), instances);
+    glBindVertexArray(transparentVertexArrayID);
+    glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(),
+                          transparentInstancesToDraw);
+
+    glDepthMask(GL_TRUE);
+  }
 }
 
 void Board::onLeftClick(v3f playerPos, v3f playerDir) noexcept {
@@ -96,7 +108,7 @@ Board::getPointedCell(v3f playerPos, v3f playerDir) const noexcept {
 }
 
 static constexpr bool
-withinBoard(std::vector<std::vector<std::vector<Cell>>> &cells, size_t x,
+withinBoard(const std::vector<std::vector<std::vector<Cell>>> &cells, size_t x,
             size_t y, size_t z) noexcept {
   // size_t is always >= 0, so skipping that check
   return x < cells[0][0].size() && y < cells[0].size() && z < cells.size();
@@ -224,7 +236,7 @@ void Board::flag(v3uz coords) noexcept {
 
 constexpr static std::string_view vertexShaderText = R"""(
 #version 330 core
-in vec3 vCol;
+in vec4 vCol;
 in vec3 vPos;
 in vec3 vOffset;
 
@@ -233,7 +245,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-out vec3 color;
+out vec4 color;
 
 void main() {
    vec3 worldPos = (vPos * uCellSize) + vOffset;
@@ -244,12 +256,12 @@ void main() {
 
 constexpr static std::string_view fragmentShaderText = R"""(
 #version 330 core
-in vec3 color;
+in vec4 color;
 
 out vec4 Fragment;
 
 void main() {
-   Fragment = vec4(color,1.0);
+   Fragment = color;
 };
 )""";
 
@@ -260,9 +272,6 @@ void main() {
   board->loadCubeMesh(std::span{CUBE_VERTICES});
   std::uint32_t bombs = 20;
   board->cells_ = generateBoard(dimensions, bombs);
-
-  glGenBuffers(1, &board->cellInstanceBufferID);
-  board->updateCubeInstanceData();
 
   std::optional<Program> programOpt = Program::create(std::vector{
       std::pair{vertexShaderText, Shader::Type::Vertex},
@@ -275,10 +284,18 @@ void main() {
   }
   board->shaderProgram = std::move(*programOpt);
 
-  if (!board->setupVAO()) {
-    logzy::critical("couldn't setup VAO for board");
+  if (!board->setupVAO(board->opaqueVertexArrayID,
+                       board->opaqueCellInstanceBufferID)) {
+    logzy::critical("couldn't setup VAO for board's opaque cubes");
     return std::nullopt;
   }
+
+  if (!board->setupVAO(board->transparentVertexArrayID,
+                       board->transparentCellInstanceBufferID)) {
+    logzy::critical("couldn't setup VAO for board's transparent cubes");
+    return std::nullopt;
+  }
+  board->updateCubeInstanceData();
 
   logzy::info("Board created");
 
@@ -292,55 +309,106 @@ void Board::loadCubeMesh(const std::span<const v3f> mesh) {
   glBufferData(GL_ARRAY_BUFFER, meshSizeBytes, mesh.data(), GL_STATIC_DRAW);
 }
 
-void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) const {
+[[nodiscard]] bool Board::drawSeeThroughAdjacent(size_t x, size_t y,
+                                                 size_t z) const noexcept {
+  const auto &currentCell = cells_[z][y][x];
+  if (!drawDugAdjacent || currentCell.state == Cell::State::Default ||
+      currentCell.bombsAround == 0) {
+    return false;
+  }
+
+  for (int dz = -1; dz < 2; ++dz) {
+    for (int dy = -1; dy < 2; ++dy) {
+      for (int dx = -1; dx < 2; ++dx) {
+        if (dx == 0 && dy == 0 && dz == 0) [[unlikely]] {
+          continue;
+        }
+        size_t newX = x + dx;
+        size_t newY = y + dy;
+        size_t newZ = z + dz;
+        if (!withinBoard(cells_, newX, newY, newZ)) {
+          continue;
+        }
+        const auto &adjacentCell = cells_[newZ][newY][newX];
+        if (adjacentCell.state != Cell::State::Dug) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
 
   assert(cells_.size() > 0 && cells_[0].size() > 0 && cells_[0][0].size() > 0 &&
          "Board is generated and has least one cell.");
 
-  std::vector<Cell::VertexData> instanceData;
-  instanceData.reserve(cells_.size() * cells_[0].size() * cells_[0][0].size());
+  std::vector<Cell::VertexData> opaqueInstanceData;
+  opaqueInstanceData.reserve(cells_.size() * cells_[0].size() *
+                             cells_[0][0].size() / 2);
 
-  logzy::info("Creating cube vertex data for {} instances",
-              instanceData.capacity());
+  std::vector<Cell::VertexData> transparentInstanceData;
+  transparentInstanceData.reserve(cells_.size() * cells_[0].size() *
+                                  cells_[0][0].size() / 2);
 
   for (std::size_t z = 0; z < cells_.size(); ++z) {
     for (std::size_t y = 0; y < cells_[z].size(); ++y) {
       for (std::size_t x = 0; x < cells_[z][y].size(); ++x) {
         const Cell &cell = cells_[z][y][x];
 
-        if (cell.state == Cell::State::Dug) {
+        bool drawSeeThrough = drawSeeThroughAdjacent(x, y, z);
+
+        if (cell.state == Cell::State::Dug && !drawSeeThrough) {
           continue;
         }
-
-        // TODO :: Ia cell is dug but it has bombAround > 0 and it is next to a
-        // cell that is not dug it should be still visible, maybe with low
-        // alpha. OTherwise it would be imposible to win
 
         bool doHighlight = (vec3(x, y, z) == pointedCellCoordiantes) &&
                            cell.state != Cell::State::Flagged;
         constexpr auto highlightColor = vec3(1.0f, 0.08f, 0.6f);
 
         v3f color = (doHighlight) ? highlightColor : cell.getColor();
+        float alpha = (drawSeeThrough) ? 0.2f : 1.0f;
 
-        DEBUG_ASSERT(cell.state != Cell::State::Dug,
-                     "Shoulnd't add dug cube coordinates");
-        instanceData.emplace_back(cellCenterPosition(vec3(x, y, z)), color);
+        Cell::VertexData data{
+            .positionOffset = cellCenterPosition(vec3(x, y, z)),
+            .color = vec4(color.x(), color.y(), color.z(), alpha)};
+
+        // Dug cube.
+        if (drawSeeThrough) {
+          transparentInstanceData.emplace_back(data);
+        } else { // Normal cube "undug"
+          opaqueInstanceData.emplace_back(data);
+        }
       }
     }
   }
 
-  logzy::info("Loaded {} cube instaces", instanceData.size());
+  transparentInstancesToDraw = transparentInstanceData.size();
+  opaqueInstancesToDraw = opaqueInstanceData.size();
+
+  logzy::info("Loaded {} cube opaque instaces and {} transparent instances",
+              opaqueInstancesToDraw, transparentInstancesToDraw);
 
   // Uploading the data to GPU
-  const std::size_t instanceDataSizeBytes =
-      instanceData.size() * sizeof(instanceData[0]);
 
-  glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
-  glBufferData(GL_ARRAY_BUFFER, instanceDataSizeBytes, instanceData.data(),
+  // Transparent
+  const std::size_t transparentSizeBytes =
+      transparentInstanceData.size() * sizeof(transparentInstanceData[0]);
+  glBindBuffer(GL_ARRAY_BUFFER, transparentCellInstanceBufferID);
+  glBufferData(GL_ARRAY_BUFFER, transparentSizeBytes,
+               transparentInstanceData.data(), GL_DYNAMIC_DRAW);
+
+  // Opaque
+  const std::size_t opaqueSizeBytes =
+      opaqueInstanceData.size() * sizeof(opaqueInstanceData[0]);
+  glBindBuffer(GL_ARRAY_BUFFER, opaqueCellInstanceBufferID);
+  glBufferData(GL_ARRAY_BUFFER, opaqueSizeBytes, opaqueInstanceData.data(),
                GL_DYNAMIC_DRAW);
 }
 
-bool Board::setupVAO() {
+bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
 
   // For mesh vertices
   const char *positionAttributeName = "vPos";
@@ -389,6 +457,8 @@ bool Board::setupVAO() {
                         sizeof(CUBE_VERTICES[0]), nullptr);
   glEnableVertexAttribArray(vposLocation);
 
+  glGenBuffers(1, &cellInstanceBufferID);
+
   // Setting up instance data
   glBindBuffer(GL_ARRAY_BUFFER, cellInstanceBufferID);
   glVertexAttribPointer(voffsetLocation, 3, GL_FLOAT, GL_FALSE,
@@ -396,7 +466,7 @@ bool Board::setupVAO() {
                         (void *)offsetof(Cell::VertexData, positionOffset));
   glEnableVertexAttribArray(voffsetLocation);
 
-  glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE,
+  glVertexAttribPointer(vcolLocation, 4, GL_FLOAT, GL_FALSE,
                         sizeof(Cell::VertexData),
                         (void *)offsetof(Cell::VertexData, color));
   glEnableVertexAttribArray(vcolLocation);

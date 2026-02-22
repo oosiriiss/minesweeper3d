@@ -2,6 +2,7 @@
 
 #include <span>
 
+#include "glad.h"
 #include "math/matrix.hpp"
 #include "render/colors.hpp"
 #include "render/program.hpp"
@@ -16,7 +17,7 @@ struct Cell {
 
   struct VertexData {
     v3f positionOffset;
-    v3f color;
+    v4f color;
   };
 
   [[nodiscard]] constexpr v3f getColor() const noexcept;
@@ -37,6 +38,10 @@ public:
 
   void onLeftClick(v3f playerPos, v3f playerDir) noexcept;
   void onRightClick(v3f playerPos, v3f playerDir) noexcept;
+  constexpr void toggleDrawNeighbours(bool draw) noexcept {
+    drawDugAdjacent = draw;
+    updateCubeInstanceData();
+  }
 
 private:
   /**
@@ -52,12 +57,19 @@ private:
 
   // Render related methods
   void loadCubeMesh(const std::span<const v3f> mesh);
-  bool setupVAO();
-  void
-  updateCubeInstanceData(v3uz pointedCellCoordiantes = vec3<size_t>(-1)) const;
+  bool setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID);
+  void updateCubeInstanceData(v3uz pointedCellCoordiantes = vec3<size_t>(-1));
+
+  /**
+   *  Whether cube at [z][y][x] that have a undug bomb around them should be
+   * visible (but partially seethrough)
+   */
+  [[nodiscard]] bool drawSeeThroughAdjacent(size_t x, size_t y,
+                                            size_t z) const noexcept;
 
 public:
   float cellSize = 1.0f;
+  bool drawDugAdjacent = false;
 
 private:
   /// Game data
@@ -71,10 +83,17 @@ private:
   /// Render data
   Program shaderProgram;
 
-  GLuint vertexArrayID;
 
   GLuint cubeMeshID;
-  GLuint cellInstanceBufferID;
+
+  GLuint opaqueVertexArrayID;
+  GLuint opaqueCellInstanceBufferID;
+
+  GLuint transparentVertexArrayID;
+  GLuint transparentCellInstanceBufferID;
+
+  size_t opaqueInstancesToDraw{0uz};
+  size_t transparentInstancesToDraw{0uz};
 };
 
 constexpr v3f Cell::getColor() const noexcept {
