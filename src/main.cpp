@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "debug_utils.hpp"
+#include "input.hpp"
 #include "math/math.hpp"
 #include "math/matrix.hpp"
 #include "render/camera.hpp"
@@ -78,6 +79,8 @@ int main() {
     return -1;
   }
 
+  Input input(window);
+
   std::random_device dev;
   std::mt19937 rng(dev());
   std::uniform_int_distribution<std::mt19937::result_type>
@@ -104,6 +107,7 @@ int main() {
   bool lastRMBPressed = false;
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
+    input.update(window);
 
     double time = static_cast<float>(glfwGetTime());
 
@@ -112,17 +116,6 @@ int main() {
     glfwGetCursorPos(window, &(newMousePos.data[0][0]),
                      &(newMousePos.data[0][1]));
     v2d mouseDelta = newMousePos - mousePos;
-
-    // Handling mouse buttons
-    bool LMBPressed =
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
-    bool LMBReleased = lastLMBPressed && !LMBPressed;
-    lastLMBPressed = LMBPressed;
-
-    bool RMBPressed =
-        glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-    bool RMBReleased = lastRMBPressed && !RMBPressed;
-    lastRMBPressed = RMBPressed;
 
     // TODO :: Investigate why does yaw have to be negated in order to rotate
     // in the right direction
@@ -138,50 +131,46 @@ int main() {
 
     float cameraDistance = cameraSpeed * dt;
 
-    if (glfwGetKey(window, GLFW_KEY_A)) {
+    if (input.isDown(Key::A)) {
       camera.move(Camera::Direction::Left, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_D)) {
+    if (input.isDown(Key::D)) {
       camera.move(Camera::Direction::Right, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_W)) {
+    if (input.isDown(Key::W)) {
       camera.move(Camera::Direction::Forward, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_S)) {
+    if (input.isDown(Key::S)) {
       camera.move(Camera::Direction::Backward, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_SPACE)) {
+    if (input.isDown(Key::Space)) {
       camera.move(Camera::Direction::Up, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
+    if (input.isDown(Key::LeftControl)) {
       camera.move(Camera::Direction::Down, cameraDistance);
     }
-    if (glfwGetKey(window, GLFW_KEY_B)) {
+
+    if (input.isPressed(Key::B)) {
       board.changeCubeSize(0.01);
       logzy::debug("Cell size is now: {}", board.cellSize);
     }
-    if (glfwGetKey(window, GLFW_KEY_N)) {
+
+    if (input.isPressed(Key::N)) {
       board.changeCubeSize(-0.01);
       logzy::debug("Cell size is now: {}", board.cellSize);
     }
-    if (glfwGetKey(window, GLFW_KEY_T)) {
+
+    if (input.isPressed(Key::N)) {
       board.toggleDrawNeighbours(!board.drawDugAdjacent);
       std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
-    if (LMBReleased) {
+    if (input.isPressed(MouseButton::Left)) {
       board.onLeftClick(camera.position, camera.getDirection());
     }
 
-    if (RMBReleased) {
+    if (input.isPressed(MouseButton::Right)) {
       board.onRightClick(camera.position, camera.getDirection());
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_P)) {
-      logzy::debug("Camera position: {}\nCamera direction: {}\nCell[0][0][0] "
-                   "position: {}",
-                   camera.position, camera.getDirection(),
-                   board.cellCenterPosition(vec3<size_t>(0, 0, 0)));
     }
 
     int width, height;
