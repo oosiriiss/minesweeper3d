@@ -83,7 +83,6 @@ private:
   /// Render data
   Program shaderProgram;
 
-
   GLuint cubeMeshID;
 
   GLuint opaqueVertexArrayID;
@@ -100,6 +99,11 @@ constexpr v3f Cell::getColor() const noexcept {
   if (state == Cell::State::Flagged) {
     return Color::Purple;
   }
+
+  if (state == Cell::State::Default) {
+    return Color::Gray;
+  }
+
   if (isBomb) {
     return Color::DarkGray;
   }
