@@ -103,8 +103,6 @@ int main() {
   Crosshair crosshair(vec2(SCREEN_WIDTH, SCREEN_HEIGHT), vec2(10u, 10u),
                       vec3(0.0f, 0.0f, 1.0f));
 
-  bool lastLMBPressed = false;
-  bool lastRMBPressed = false;
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     input.update(window);
@@ -193,12 +191,9 @@ int main() {
     // Drawing ui
     // Static ui doesnt need depth
     glDisable(GL_DEPTH_TEST);
-
     auto ortho = orthographic(0.0f, SCREEN_WIDTH, 0.0F, SCREEN_HEIGHT, -1.0f);
 
-    //
     // Crosshair
-
     crosshair.draw(ortho);
 
     // Resetting depth test

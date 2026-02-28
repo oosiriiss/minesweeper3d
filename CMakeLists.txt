@@ -14,13 +14,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(logzy)
 
-
-add_executable(
-   minesweeper3d
-
-   ./vendor/glad/glad.c
-
-   ./src/main.cpp
+add_library(
+   minesweeper3d-lib
 
    ./src/game/board.cpp
    ./src/game/board.hpp
@@ -38,13 +33,20 @@ add_executable(
    ./src/render/shader.hpp
 )
 
+add_executable(minesweeper3d
+   ./src/main.cpp
+   ./vendor/glad/glad.c
+)
 
 if(ENABLE_DEBUG_UTILS)
+   target_compile_definitions(minesweeper3d-lib PUBLIC ENABLE_DEBUG_UTILS)
    target_compile_definitions(minesweeper3d PUBLIC ENABLE_DEBUG_UTILS)
 endif()
 
-include_directories(./src)
+target_compile_features(minesweeper3d-lib PUBLIC cxx_std_23)
+target_compile_features(minesweeper3d PUBLIC cxx_std_23)
 
+include_directories(./src)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -52,7 +54,6 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 # TODO Turn off building examples once base is set up
 set(GLFW_BUILD_EXAMPLES ON CACHE BOOL "" FORCE)
-
 
 add_subdirectory(./vendor/glfw)
 
@@ -66,9 +67,12 @@ find_package(OpenGL REQUIRED)
 # TODO :: GLM is only for now so I dont wanna bother setting up dependency properly
 find_package(glm REQUIRED)
 
-target_compile_features(minesweeper3d PUBLIC cxx_std_23)
 
-target_link_libraries(minesweeper3d glfw OpenGL::GL logzy::logzy glm::glm)
+
+target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy glm::glm)
+target_link_libraries(minesweeper3d minesweeper3d-lib)
+
+add_subdirectory(./tests)
 
 
 
