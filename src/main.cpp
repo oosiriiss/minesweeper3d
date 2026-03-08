@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "debug_utils.hpp"
+#include "game/resource_manager.hpp"
 #include "input.hpp"
 #include "math/math.hpp"
 #include "math/matrix.hpp"
@@ -22,6 +23,20 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
                         int mods) {
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GLFW_TRUE);
+}
+
+void loadTextures() {
+  for (size_t i = 0; i < 27; ++i) {
+    auto texturePath = std::format("tiles/tile_{}.jpg", i);
+    if (ResourceManager::loadTexture(texturePath)) {
+      logzy::info("Loaded texture: {}", texturePath);
+
+    } else
+
+    {
+      logzy::critical("Failed to load texture: {}", texturePath);
+    }
+  }
 }
 
 int main() {
@@ -68,6 +83,7 @@ int main() {
   glEnable(GL_BLEND);
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
+  loadTextures();
   Board board;
 
   constexpr size_t BOARD_SIZE{10};

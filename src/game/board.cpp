@@ -157,10 +157,7 @@ Board::generateBoard(const v3uz dimensions, std::uint32_t bombs) {
 
   logzy::debug("Generating random bomb positions");
   std::vector<size_t> bombIndices = randomUniqueRange(0uz, cellCount - 1);
-
   logzy::debug("Placing bombs {} at generated positions", bombs);
-
-  logzy::debug("Bomb positions: {}", bombIndices);
 
   for (size_t index : bombIndices | std::views::take(bombs)) {
     size_t x = index % dimensions.x();
