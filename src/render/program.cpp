@@ -42,6 +42,7 @@ Program::create(const std::vector<std::pair<std::string_view, Shader::Type>>
   }
 
   GLint success;
+
   // Checking link errors
   glGetProgramiv(p->ID, GL_LINK_STATUS, &success);
   if (success == GL_FALSE) {
@@ -162,4 +163,21 @@ bool Program::setFloat(const std::string &name, float value) const {
 }
 void Program::setFloat(GLint location, float value) const {
   glUniform1f(location, static_cast<GLfloat>(value));
+}
+
+bool Program::setInt(const std::string &name, int value) const {
+  auto locOpt = getUniformLocation(name);
+
+  if (!locOpt) {
+    return false;
+  }
+
+  glUniform1i(*locOpt, value);
+
+  return true;
+}
+
+// Assumes location is valid
+void Program::setInt(GLint location, int value) const {
+  glUniform1i(location, value);
 }

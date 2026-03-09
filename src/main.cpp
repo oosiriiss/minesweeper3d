@@ -26,16 +26,24 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 }
 
 void loadTextures() {
-  for (size_t i = 0; i < 27; ++i) {
-    auto texturePath = std::format("tiles/tile_{}.jpg", i);
-    if (ResourceManager::loadTexture(texturePath)) {
-      logzy::info("Loaded texture: {}", texturePath);
 
-    } else
+  std::array<std::string_view, 27> paths{
+      "tiles/tile_0.jpg",  "tiles/tile_1.jpg",  "tiles/tile_2.jpg",
+      "tiles/tile_3.jpg",  "tiles/tile_4.jpg",  "tiles/tile_5.jpg",
+      "tiles/tile_6.jpg",  "tiles/tile_7.jpg",  "tiles/tile_8.jpg",
+      "tiles/tile_9.jpg",  "tiles/tile_10.jpg", "tiles/tile_11.jpg",
+      "tiles/tile_12.jpg", "tiles/tile_13.jpg", "tiles/tile_14.jpg",
+      "tiles/tile_15.jpg", "tiles/tile_16.jpg", "tiles/tile_17.jpg",
+      "tiles/tile_18.jpg", "tiles/tile_19.jpg", "tiles/tile_20.jpg",
+      "tiles/tile_21.jpg", "tiles/tile_22.jpg", "tiles/tile_23.jpg",
+      "tiles/tile_24.jpg", "tiles/tile_25.jpg", "tiles/tile_26.jpg"};
 
-    {
-      logzy::critical("Failed to load texture: {}", texturePath);
-    }
+  if (ResourceManager::loadTextureArray(ResourceManager::TileTexturesKey,
+                                        std::span{paths})) {
+    logzy::info("Loaded texture array: {}", ResourceManager::TileTexturesKey);
+  } else {
+    logzy::critical("Failed to load texture: {}",
+                    ResourceManager::TileTexturesKey);
   }
 }
 

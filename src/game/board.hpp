@@ -18,6 +18,8 @@ struct Cell {
   struct VertexData {
     v3f positionOffset;
     v4f color;
+    // Layer for sampler2DArray
+    float textureIndex;
   };
 
   [[nodiscard]] constexpr v3f getColor() const noexcept;
@@ -56,7 +58,8 @@ private:
   generateBoard(const v3uz dimensions, std::uint32_t bombs);
 
   // Render related methods
-  void loadCubeMesh(const std::span<const v3f> mesh);
+  void loadCubeMesh(const std::span<const v3f> mesh,
+                    const std::span<const v2f> textureCoords);
   bool setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID);
   void updateCubeInstanceData(v3uz pointedCellCoordiantes = vec3<size_t>(-1));
 
@@ -83,7 +86,10 @@ private:
   /// Render data
   Program shaderProgram;
 
+  // Cube vertex position buffer
   GLuint cubeMeshID;
+  // Cube vertex texture coord buffer
+  GLuint cubeUvID;
 
   GLuint opaqueVertexArrayID;
   GLuint opaqueCellInstanceBufferID;

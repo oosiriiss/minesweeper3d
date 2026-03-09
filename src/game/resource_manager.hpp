@@ -2,11 +2,13 @@
 #include "render/texture.hpp"
 #include <filesystem>
 #include <functional>
+#include <span>
 #include <string_view>
 #include <unordered_map>
 
 struct ResourceManager {
 
+  constexpr static std::string_view TileTexturesKey = "TileTextures";
   inline static std::filesystem::path BASE_ASSET_PATH{"assets"};
 
   /**
@@ -24,6 +26,15 @@ struct ResourceManager {
              std::filesystem::path basePath = BASE_ASSET_PATH)
       -> const Texture &;
 
+  static auto loadTextureArray(std::string_view arrayName,
+                               std::span<std::string_view> paths,
+                               TextureParams params = {},
+                               std::filesystem::path basePath = BASE_ASSET_PATH)
+      -> bool;
+
+  static auto getTextureArray(std::string_view arrayName)
+      -> const TextureArray &;
+
 private:
   static auto verifyPath(std::filesystem::path path) noexcept -> bool;
 
@@ -40,4 +51,8 @@ private:
   inline static std::unordered_map<std::string, Texture, StringHash,
                                    std::equal_to<>>
       textures_;
+
+  inline static std::unordered_map<std::string, TextureArray, StringHash,
+                                   std::equal_to<>>
+      textureArrays_;
 };

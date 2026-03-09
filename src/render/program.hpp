@@ -36,4 +36,8 @@ struct Program {
   bool setFloat(const std::string &name, float value) const;
   // Assumes location is valid
   void setFloat(GLint location, float value) const;
+
+  bool setInt(const std::string &name, int value) const;
+  // Assumes location is valid
+  void setInt(GLint location, int value) const;
 };

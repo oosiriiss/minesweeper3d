@@ -6,6 +6,7 @@
 #include <ranges>
 
 #include "debug_utils.hpp"
+#include "game/resource_manager.hpp"
 #include "glad.h"
 #include "math/intersections.hpp"
 #include "math/matrix.hpp"
@@ -24,6 +25,12 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
   shaderProgram.setFloat("uCellSize", cellSize);
   shaderProgram.setM4x4("view", view);
   shaderProgram.setM4x4("projection", projection);
+  shaderProgram.setInt("Texture", 0);
+
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(
+      GL_TEXTURE_2D_ARRAY,
+      ResourceManager::getTextureArray(ResourceManager::TileTexturesKey).ID);
 
   if (opaqueInstancesToDraw > 0) {
     glBindVertexArray(opaqueVertexArrayID);
@@ -231,11 +238,13 @@ void Board::flag(v3uz coords) noexcept {
   updateCubeInstanceData();
 }
 
-constexpr static std::string_view vertexShaderText = R"""(
+constexpr static std::string_view vertexShaderText = R"(
 #version 330 core
 in vec4 vCol;
 in vec3 vPos;
 in vec3 vOffset;
+in vec2 vTexCoord;
+in float vTexID;
 
 uniform float uCellSize;
 uniform mat4 model;
@@ -244,21 +253,29 @@ uniform mat4 projection;
 
 out vec4 color;
 
+// UV coordiantes and texture ID
+out vec3 TexData;
+
 void main() {
    vec3 worldPos = (vPos * uCellSize) + vOffset;
     gl_Position = projection * view * vec4(worldPos,1.0);
+
     color = vCol;
-};
-)""";
+    TexData = vec3(vTexCoord,vTexID);
+}
+)";
 
 constexpr static std::string_view fragmentShaderText = R"""(
 #version 330 core
 in vec4 color;
-
+in vec3 TexData; // UV + layer
 out vec4 Fragment;
 
+uniform sampler2DArray Texture;
+
 void main() {
-   Fragment = color;
+   // Fragment = texture(Texture, TexData) * vec4(1.0,1.0,color.x,1.0);
+   Fragment = color * 0.2  + texture(Texture,TexData) * 0.8;
 };
 )""";
 
@@ -266,7 +283,7 @@ void main() {
 
   std::optional<Board> board(Board{});
 
-  board->loadCubeMesh(std::span{CUBE_VERTICES});
+  board->loadCubeMesh(std::span{CUBE_VERTICES}, std::span{CUBE_UV});
   std::uint32_t bombs = 20;
   board->cells_ = generateBoard(dimensions, bombs);
 
@@ -299,11 +316,24 @@ void main() {
   return board;
 }
 
-void Board::loadCubeMesh(const std::span<const v3f> mesh) {
-  glGenBuffers(1, &cubeMeshID);
+void Board::loadCubeMesh(const std::span<const v3f> mesh,
+                         const std::span<const v2f> textureCoords) {
+
+  DEBUG_ASSERT(mesh.size() == textureCoords.size());
+
+  GLuint buffers[2];
+  glGenBuffers(2, buffers);
+  cubeMeshID = buffers[0];
+  cubeUvID = buffers[1];
+
   glBindBuffer(GL_ARRAY_BUFFER, cubeMeshID);
-  std::size_t meshSizeBytes = mesh.size() * sizeof(mesh[0]);
+  std::size_t meshSizeBytes = mesh.size_bytes();
   glBufferData(GL_ARRAY_BUFFER, meshSizeBytes, mesh.data(), GL_STATIC_DRAW);
+
+  glBindBuffer(GL_ARRAY_BUFFER, cubeUvID);
+  std::size_t textureCoordsSizeBytes = textureCoords.size_bytes();
+  glBufferData(GL_ARRAY_BUFFER, textureCoordsSizeBytes, textureCoords.data(),
+               GL_STATIC_DRAW);
 }
 
 [[nodiscard]] bool Board::drawSeeThroughAdjacent(size_t x, size_t y,
@@ -370,7 +400,8 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
 
         Cell::VertexData data{
             .positionOffset = cellCenterPosition(vec3(x, y, z)),
-            .color = vec4(color.x(), color.y(), color.z(), alpha)};
+            .color = vec4(color.x(), color.y(), color.z(), alpha),
+            .textureIndex = static_cast<float>(cell.bombsAround)};
 
         // Dug cube.
         if (drawSeeThrough) {
@@ -409,13 +440,21 @@ bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
 
   // For mesh vertices
   const char *positionAttributeName = "vPos";
-  const char *colorAttributeName = "vCol";
+  // Texture coords
+  const char *textureCoordsAttributeName = "vTexCoord";
+
+  // INSTANCE
   // Actual cube position
   const char *positionOffsetAttributeName = "vOffset";
+  const char *colorAttributeName = "vCol";
+  const char *textureIDAttributeName = "vTexID";
 
   GLint vposLocation = -1;
+  GLint texCoordLocation = -1;
+
   GLint voffsetLocation = -1;
   GLint vcolLocation = -1;
+  GLuint vTextureIDLocation = -1;
 
   if (auto vposLocationOpt =
           shaderProgram.getAttribLocation(positionAttributeName)) {
@@ -444,6 +483,23 @@ bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
   }
   logzy::info("{} shader attribute found", positionOffsetAttributeName);
 
+  if (auto texCoordLocationOpt =
+          shaderProgram.getAttribLocation(textureCoordsAttributeName)) {
+    texCoordLocation = *texCoordLocationOpt;
+  } else {
+    logzy::critical("Couldn't find {} attribute", textureCoordsAttributeName);
+    return false;
+  }
+
+  if (auto textureIDLocationOpt =
+          shaderProgram.getAttribLocation(textureIDAttributeName)) {
+    vTextureIDLocation = *textureIDLocationOpt;
+  } else {
+    logzy::critical("Couldn't find {} attribute", textureIDAttributeName);
+    return false;
+  }
+  logzy::info("{} shader attribute found", textureIDAttributeName);
+
   // Setting up VAO
   glGenVertexArrays(1, &vertexArrayID);
   glBindVertexArray(vertexArrayID);
@@ -454,6 +510,13 @@ bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
                         sizeof(CUBE_VERTICES[0]), nullptr);
   glEnableVertexAttribArray(vposLocation);
 
+  // cube mesh coords
+  glBindBuffer(GL_ARRAY_BUFFER, cubeUvID);
+  glVertexAttribPointer(texCoordLocation, 2, GL_FLOAT, GL_FALSE,
+                        sizeof(CUBE_UV[0]), nullptr);
+  glEnableVertexAttribArray(texCoordLocation);
+
+  // instance buffers
   glGenBuffers(1, &cellInstanceBufferID);
 
   // Setting up instance data
@@ -462,13 +525,18 @@ bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
                         sizeof(Cell::VertexData),
                         (void *)offsetof(Cell::VertexData, positionOffset));
   glEnableVertexAttribArray(voffsetLocation);
+  glVertexAttribDivisor(voffsetLocation, 1);
 
   glVertexAttribPointer(vcolLocation, 4, GL_FLOAT, GL_FALSE,
                         sizeof(Cell::VertexData),
                         (void *)offsetof(Cell::VertexData, color));
   glEnableVertexAttribArray(vcolLocation);
-
-  glVertexAttribDivisor(voffsetLocation, 1);
   glVertexAttribDivisor(vcolLocation, 1);
+
+  glVertexAttribPointer(vTextureIDLocation, 1, GL_FLOAT, GL_FALSE,
+                        sizeof(Cell::VertexData),
+                        (void *)offsetof(Cell::VertexData, textureIndex));
+  glEnableVertexAttribArray(vTextureIDLocation);
+  glVertexAttribDivisor(vTextureIDLocation, 1);
   return true;
 }
