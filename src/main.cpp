@@ -27,16 +27,17 @@ static void keyCallback(GLFWwindow *window, int key, int scancode, int action,
 
 void loadTextures() {
 
-  std::array<std::string_view, 27> paths{
-      "tiles/tile_0.jpg",  "tiles/tile_1.jpg",  "tiles/tile_2.jpg",
-      "tiles/tile_3.jpg",  "tiles/tile_4.jpg",  "tiles/tile_5.jpg",
-      "tiles/tile_6.jpg",  "tiles/tile_7.jpg",  "tiles/tile_8.jpg",
-      "tiles/tile_9.jpg",  "tiles/tile_10.jpg", "tiles/tile_11.jpg",
-      "tiles/tile_12.jpg", "tiles/tile_13.jpg", "tiles/tile_14.jpg",
-      "tiles/tile_15.jpg", "tiles/tile_16.jpg", "tiles/tile_17.jpg",
-      "tiles/tile_18.jpg", "tiles/tile_19.jpg", "tiles/tile_20.jpg",
-      "tiles/tile_21.jpg", "tiles/tile_22.jpg", "tiles/tile_23.jpg",
-      "tiles/tile_24.jpg", "tiles/tile_25.jpg", "tiles/tile_26.jpg"};
+  std::array<std::string_view, 28> paths{
+      "tiles/tile_0.jpg",   "tiles/tile_1.jpg",  "tiles/tile_2.jpg",
+      "tiles/tile_3.jpg",   "tiles/tile_4.jpg",  "tiles/tile_5.jpg",
+      "tiles/tile_6.jpg",   "tiles/tile_7.jpg",  "tiles/tile_8.jpg",
+      "tiles/tile_9.jpg",   "tiles/tile_10.jpg", "tiles/tile_11.jpg",
+      "tiles/tile_12.jpg",  "tiles/tile_13.jpg", "tiles/tile_14.jpg",
+      "tiles/tile_15.jpg",  "tiles/tile_16.jpg", "tiles/tile_17.jpg",
+      "tiles/tile_18.jpg",  "tiles/tile_19.jpg", "tiles/tile_20.jpg",
+      "tiles/tile_21.jpg",  "tiles/tile_22.jpg", "tiles/tile_23.jpg",
+      "tiles/tile_24.jpg",  "tiles/tile_25.jpg", "tiles/tile_26.jpg",
+      "tiles/tile_flag.jpg"};
 
   if (ResourceManager::loadTextureArray(ResourceManager::TileTexturesKey,
                                         std::span{paths})) {

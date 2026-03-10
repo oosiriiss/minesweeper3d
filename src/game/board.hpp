@@ -2,6 +2,7 @@
 
 #include <span>
 
+#include "debug_utils.hpp"
 #include "glad.h"
 #include "math/matrix.hpp"
 #include "render/colors.hpp"
@@ -23,6 +24,7 @@ struct Cell {
   };
 
   [[nodiscard]] constexpr v3f getColor() const noexcept;
+  [[nodiscard]] constexpr float getTextureIndex() const noexcept;
 };
 
 struct Board {
@@ -128,6 +130,22 @@ constexpr v3f Cell::getColor() const noexcept {
   }
   logzy::critical("Unreachable reached.");
   std::unreachable();
+}
+
+constexpr float Cell::getTextureIndex() const noexcept {
+  constexpr float FLAG_LAYER_INDEX =
+      27.0f; // float because its like this in shader
+  constexpr float UNDUG_INDEX = 0.0f;
+  if (state == Cell::State::Flagged) {
+    return FLAG_LAYER_INDEX;
+  }
+
+  if (state == Cell::State::Default) {
+    return UNDUG_INDEX;
+  }
+  DEBUG_ASSERT(bombsAround >= 0 && bombsAround <= 26,
+               std::to_string(bombsAround));
+  return static_cast<float>(bombsAround);
 }
 
 constexpr void Board::changeCubeSize(float difference) noexcept {

@@ -401,7 +401,7 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
         Cell::VertexData data{
             .positionOffset = cellCenterPosition(vec3(x, y, z)),
             .color = vec4(color.x(), color.y(), color.z(), alpha),
-            .textureIndex = static_cast<float>(cell.bombsAround)};
+            .textureIndex = cell.getTextureIndex()};
 
         // Dug cube.
         if (drawSeeThrough) {
