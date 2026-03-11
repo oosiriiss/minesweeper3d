@@ -185,7 +185,6 @@ int main() {
 
     if (input.isPressed(Key::N)) {
       board.toggleDrawNeighbours(!board.drawDugAdjacent);
-      std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 
     if (input.isPressed(MouseButton::Left)) {

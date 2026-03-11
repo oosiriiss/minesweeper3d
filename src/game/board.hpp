@@ -33,7 +33,7 @@ public:
   static constexpr float CELL_SPACING = 0.1f;
 
   [[nodiscard]] static std::optional<Board> create(v3uz dimensions);
-  void draw(const m4x4f &view, const m4x4f &projection) const;
+  void draw(const m4x4f &view, const m4x4f &projection);
   void dig(v3uz coords) noexcept;
   void flag(v3uz coords) noexcept;
   constexpr void changeCubeSize(float difference) noexcept;
@@ -98,9 +98,11 @@ private:
 
   GLuint transparentVertexArrayID;
   GLuint transparentCellInstanceBufferID;
+  // Transparent objects require sorting  from furthest to closest in draw
+  // method, so we need to keep track of them
+  std::vector<Cell::VertexData> transparentInstanceData;
 
   size_t opaqueInstancesToDraw{0uz};
-  size_t transparentInstancesToDraw{0uz};
 };
 
 constexpr v3f Cell::getColor() const noexcept {

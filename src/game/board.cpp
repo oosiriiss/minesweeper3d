@@ -13,7 +13,7 @@
 #include "math/random.hpp"
 #include "render/mesh.hpp"
 
-void Board::draw(const m4x4f &view, const m4x4f &projection) const {
+void Board::draw(const m4x4f &view, const m4x4f &projection) {
 
   DEBUG_ASSERT(cells_.size() > 0 && cells_[0].size() > 0 &&
                    cells_[0][0].size() > 0,
@@ -38,16 +38,35 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) const {
                           opaqueInstancesToDraw);
   }
 
-  if (transparentInstancesToDraw > 0) {
-    // Transparent cubes are split into separate buffer to make the alpha
-    // blending work correct and to avoid depth sorting.
-    // TODO :: Is this "dirty"?
-    glDepthMask(GL_FALSE);
+  if (transparentInstanceData.size() > 0) {
 
+    auto camReverseDirection =
+        vec3(view.data[0][2], view.data[1][2], view.data[2][2]);
+
+    // Depth sorting
+    std::ranges::sort(transparentInstanceData, [&](const Cell::VertexData &a,
+                                                   const Cell::VertexData &b) {
+      // Checking which offset better 'overlaps' the camDirection and thus
+      // is further away
+      auto aDirProjection = dot(a.positionOffset, camReverseDirection);
+      auto bDirProjection = dot(b.positionOffset, camReverseDirection);
+
+      return aDirProjection < bDirProjection;
+    });
+    // Sending sorted data t o gpu
+    glBindBuffer(GL_ARRAY_BUFFER, transparentCellInstanceBufferID);
+    const GLsizeiptr transparentSizeBytes =
+        transparentInstanceData.size() * sizeof(transparentInstanceData[0]);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, transparentSizeBytes,
+                    transparentInstanceData.data());
+    // Resetting buffer
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // Drawing transparent cubes
+    glDepthMask(GL_FALSE);
     glBindVertexArray(transparentVertexArrayID);
     glDrawArraysInstanced(GL_TRIANGLES, 0, CUBE_VERTICES.size(),
-                          transparentInstancesToDraw);
-
+                          transparentInstanceData.size());
     glDepthMask(GL_TRUE);
   }
 }
@@ -274,8 +293,7 @@ out vec4 Fragment;
 uniform sampler2DArray Texture;
 
 void main() {
-   // Fragment = texture(Texture, TexData) * vec4(1.0,1.0,color.x,1.0);
-   Fragment = color * 0.2  + texture(Texture,TexData) * 0.8;
+   Fragment = vec4(mix(color.rgb,texture(Texture,TexData).rgb,0.9), color.a);
 };
 )""";
 
@@ -376,9 +394,7 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
   opaqueInstanceData.reserve(cells_.size() * cells_[0].size() *
                              cells_[0][0].size() / 2);
 
-  std::vector<Cell::VertexData> transparentInstanceData;
-  transparentInstanceData.reserve(cells_.size() * cells_[0].size() *
-                                  cells_[0][0].size() / 2);
+  transparentInstanceData.clear();
 
   for (std::size_t z = 0; z < cells_.size(); ++z) {
     for (std::size_t y = 0; y < cells_[z].size(); ++y) {
@@ -396,7 +412,7 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
         constexpr auto highlightColor = vec3(1.0f, 0.08f, 0.6f);
 
         v3f color = (doHighlight) ? highlightColor : cell.getColor();
-        float alpha = (drawSeeThrough) ? 0.2f : 1.0f;
+        float alpha = (drawSeeThrough) ? 0.5f : 1.0f;
 
         Cell::VertexData data{
             .positionOffset = cellCenterPosition(vec3(x, y, z)),
@@ -413,20 +429,12 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
     }
   }
 
-  transparentInstancesToDraw = transparentInstanceData.size();
   opaqueInstancesToDraw = opaqueInstanceData.size();
 
   logzy::info("Loaded {} cube opaque instaces and {} transparent instances",
-              opaqueInstancesToDraw, transparentInstancesToDraw);
+              opaqueInstancesToDraw, transparentInstanceData.size());
 
   // Uploading the data to GPU
-
-  // Transparent
-  const std::size_t transparentSizeBytes =
-      transparentInstanceData.size() * sizeof(transparentInstanceData[0]);
-  glBindBuffer(GL_ARRAY_BUFFER, transparentCellInstanceBufferID);
-  glBufferData(GL_ARRAY_BUFFER, transparentSizeBytes,
-               transparentInstanceData.data(), GL_DYNAMIC_DRAW);
 
   // Opaque
   const std::size_t opaqueSizeBytes =
@@ -434,6 +442,15 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
   glBindBuffer(GL_ARRAY_BUFFER, opaqueCellInstanceBufferID);
   glBufferData(GL_ARRAY_BUFFER, opaqueSizeBytes, opaqueInstanceData.data(),
                GL_DYNAMIC_DRAW);
+
+  // Transparent
+  //
+  // Initial upload here
+  const std::size_t transparentSizeBytes =
+      transparentInstanceData.size() * sizeof(transparentInstanceData[0]);
+  glBindBuffer(GL_ARRAY_BUFFER, transparentCellInstanceBufferID);
+  glBufferData(GL_ARRAY_BUFFER, transparentSizeBytes,
+               transparentInstanceData.data(), GL_DYNAMIC_DRAW);
 }
 
 bool Board::setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID) {
