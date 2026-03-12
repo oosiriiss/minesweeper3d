@@ -114,7 +114,7 @@ int main() {
   constexpr v3f cameraInitialPosition = vec3<float>(.0F, .0F, 20.0F);
   constexpr v3f cameraArbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
   constexpr float cameraSpeed = 10.0F;
-  constexpr float horizontalSensitivity = 0.5f;
+  constexpr float horizontalSensitivity = 5.f;
   constexpr float verticalSensitivity = horizontalSensitivity / 1.5f;
 
   Camera camera(cameraInitialPosition, cameraArbitraryUp);
@@ -140,17 +140,17 @@ int main() {
                      &(newMousePos.data[0][1]));
     v2d mouseDelta = newMousePos - mousePos;
 
+    mousePos = newMousePos;
+
+    float dt = time - lastTime;
+    lastTime = time;
+
     // TODO :: Investigate why does yaw have to be negated in order to rotate
     // in the right direction
     camera.rotate(vec3<float>(
-        static_cast<float>(mouseDelta.data[0][1]) * horizontalSensitivity,
-        static_cast<float>(-mouseDelta.data[0][0]) * verticalSensitivity,
+        static_cast<float>(mouseDelta.data[0][1]) * horizontalSensitivity * dt,
+        static_cast<float>(-mouseDelta.data[0][0]) * verticalSensitivity * dt,
         0.0F));
-
-    mousePos = newMousePos;
-
-    float dt = lastTime - time;
-    lastTime = time;
 
     float cameraDistance = cameraSpeed * dt;
 

@@ -49,22 +49,22 @@ struct Camera {
 
     switch (direction) {
     case Direction::Left:
-      position = position + right * distance;
-      break;
-    case Direction::Right:
       position = position - right * distance;
       break;
-    case Direction::Forward:
-      position = position + this->reverseDirection * distance;
+    case Direction::Right:
+      position = position + right * distance;
       break;
-    case Direction::Backward:
+    case Direction::Forward:
       position = position - this->reverseDirection * distance;
       break;
+    case Direction::Backward:
+      position = position + this->reverseDirection * distance;
+      break;
     case Direction::Up:
-      position = position - arbitraryUp * distance;
+      position = position + arbitraryUp * distance;
       break;
     case Direction::Down:
-      position = position + arbitraryUp * distance;
+      position = position - arbitraryUp * distance;
       break;
     }
   }
