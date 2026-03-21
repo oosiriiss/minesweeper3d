@@ -6,12 +6,12 @@
 #include <ranges>
 
 #include "debug_utils.hpp"
-#include "game/resource_manager.hpp"
 #include "glad.h"
 #include "math/intersections.hpp"
 #include "math/matrix.hpp"
 #include "math/random.hpp"
 #include "render/mesh.hpp"
+#include "resource_manager.hpp"
 
 void Board::draw(const m4x4f &view, const m4x4f &projection) {
 

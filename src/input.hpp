@@ -1,6 +1,7 @@
 #pragma once
 
 #include "debug_utils.hpp"
+#include "math/matrix.hpp"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <stdint.h>
@@ -144,12 +145,8 @@ mouseButtonToGLFW(MouseButton button) noexcept {
 }
 
 struct Input {
+  constexpr Input() noexcept : keyStates{}, mouseStates{} {}
 
-  constexpr Input(GLFWwindow *window) noexcept {
-    // Update twice to fill two keyStates and lastKeySates with the same data
-    update(window);
-    update(window);
-  }
   Input(const Input &other) = delete;
   Input(Input &&other) = delete;
   Input &operator=(Input &&other) = delete;
@@ -174,7 +171,7 @@ struct Input {
       }
     }
 
-    // Updating mouse
+    // Updating mouse click states
     constexpr size_t mouseButtons =
         static_cast<size_t>(MouseButton::__SizeGuard);
     for (size_t i = 0; i < mouseButtons; ++i) {
@@ -191,6 +188,11 @@ struct Input {
         mouseStates[i] = getState(mouseStates[i], isDown);
       }
     }
+
+    // Updating mouse position
+    lastMousePosition = mousePosition;
+    glfwGetCursorPos(window, &(mousePosition.data[0][0]),
+                     &(mousePosition.data[0][1]));
   }
 
   [[nodiscard]] constexpr bool isPressed(Key k) const noexcept {
@@ -237,6 +239,10 @@ struct Input {
            mouseStates[static_cast<size_t>(k)] == KeyState::Held;
   }
 
+  [[nodiscard]] constexpr v2d getMouseDelta() const noexcept {
+    return mousePosition - lastMousePosition;
+  }
+
 private:
   // Keyboard
   std::array<KeyState, static_cast<size_t>(Key::__SizeGuard)> keyStates{};
@@ -244,4 +250,7 @@ private:
   // Mouse
   std::array<KeyState, static_cast<size_t>(MouseButton::__SizeGuard)>
       mouseStates{};
+
+  v2d lastMousePosition{};
+  v2d mousePosition{};
 };

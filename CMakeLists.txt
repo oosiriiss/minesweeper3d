@@ -22,8 +22,8 @@ add_library(
    ./src/game/crosshair.cpp
    ./src/game/crosshair.hpp
 
-   ./src/game/resource_manager.cpp
-   ./src/game/resource_manager.hpp
+   ./src/resource_manager.cpp
+   ./src/resource_manager.hpp
 
    ./src/math/math.hpp
    ./src/math/matrix.hpp
@@ -36,6 +36,9 @@ add_library(
    ./src/render/shader.hpp
    ./src/render/texture.cpp
    ./src/render/texture.hpp
+
+   ./src/application.cpp
+   ./src/application.cpp
 )
 
 add_executable(minesweeper3d
