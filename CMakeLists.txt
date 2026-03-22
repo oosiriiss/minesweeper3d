@@ -39,6 +39,21 @@ add_library(
 
    ./src/application.cpp
    ./src/application.cpp
+
+   ./vendor/imgui/imconfig.h
+   ./vendor/imgui/imgui.h
+   ./vendor/imgui/imgui.cpp
+   ./vendor/imgui/imgui_draw.cpp
+   ./vendor/imgui/imgui_impl_glfw.cpp
+   ./vendor/imgui/imgui_impl_glfw.h
+   ./vendor/imgui/imgui_impl_opengl3.cpp
+   ./vendor/imgui/imgui_impl_opengl3.h
+   ./vendor/imgui/imgui_internal.h
+   ./vendor/imgui/imgui_tables.cpp
+   ./vendor/imgui/imgui_widgets.cpp
+   ./vendor/imgui/imstb_rectpack.h
+   ./vendor/imgui/imstb_textedit.h
+   ./vendor/imgui/imstb_truetype.h
 )
 
 add_executable(minesweeper3d
@@ -50,6 +65,9 @@ if(ENABLE_DEBUG_UTILS)
    target_compile_definitions(minesweeper3d-lib PUBLIC ENABLE_DEBUG_UTILS)
    target_compile_definitions(minesweeper3d PUBLIC ENABLE_DEBUG_UTILS)
 endif()
+
+# This caused issues when includign glad
+target_compile_definitions(minesweeper3d-lib PUBLIC GLFW_INCLUDE_NONE)
 
 target_compile_features(minesweeper3d-lib PUBLIC cxx_std_23)
 target_compile_features(minesweeper3d PUBLIC cxx_std_23)
@@ -69,6 +87,7 @@ include_directories(./vendor/glad)
 include_directories(./vendor/glfw)
 include_directories(./vendor/stb)
 include_directories(./vendor/debug_utils)
+include_directories(./vendor/imgui/)
 
 find_package(OpenGL REQUIRED)
 

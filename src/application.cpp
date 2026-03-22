@@ -4,8 +4,12 @@
 #include <logzy/logzy.hpp>
 
 #include "debug_utils.hpp"
+#include "game/board.hpp"
 #include "game/crosshair.hpp"
 #include "glad.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 #include "render/camera.hpp"
 #include "resource_manager.hpp"
 
@@ -109,6 +113,26 @@ static void intializeOpenGL(GLFWwindow *window) {
   glClearColor(0.0, 0.0, 0.0, 0.0);
 }
 
+static void initializeDearImgui(GLFWwindow *window) {
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  ImGui::StyleColorsDark();
+
+  float scale =
+      ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+
+  ImGuiStyle &style = ImGui::GetStyle();
+  style.ScaleAllSizes(scale);
+  style.FontScaleDpi = scale;
+
+  bool installCallbacks = true;
+  ImGui_ImplGlfw_InitForOpenGL(window, installCallbacks);
+  ImGui_ImplOpenGL3_Init("#version 330 core");
+}
+
 auto Application::initialize() -> bool {
   if (!initializeGLFW()) {
     logzy::critical("GLFW could not be initialized");
@@ -128,6 +152,7 @@ auto Application::initialize() -> bool {
   }
 
   intializeOpenGL(mainWindow_);
+  initializeDearImgui(mainWindow_);
 
   // TODO :: Later scenes should load assets they need
   loadTextures();
@@ -200,6 +225,20 @@ static void drawHUD(const Crosshair &cs, const m4x4f &proj) {
   // Crosshair
   cs.draw(proj);
 
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+
+  {
+    ImGui::Begin("Test ImGui window!");
+    ImGui::Text("ImGui text");
+    ImGui::Text("ImGui text");
+    ImGui::End();
+  }
+
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
   // Resetting depth test
   glEnable(GL_DEPTH_TEST);
 }
@@ -267,7 +306,14 @@ auto Application::shutdown() -> bool {
   }
   glfwDestroyWindow(mainWindow_);
 
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+
   // Shutting odwn glfw
+  glfwDestroyWindow(mainWindow_);
+  mainWindow_ = nullptr;
   glfwTerminate();
+
   return true;
 }
