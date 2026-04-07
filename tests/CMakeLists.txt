@@ -6,13 +6,14 @@ if(NOT COMPILE_TESTS)
    return()
 endif()
 
+
 project(minesweeper3d-tests)
 
 include(FetchContent)
 FetchContent_Declare(
    tasty
    GIT_REPOSITORY https://github.com/oosiriiss/tasty
-   GIT_TAG 0.2.9.2
+   GIT_TAG 0.2.11
 )
 FetchContent_MakeAvailable(tasty)
 
