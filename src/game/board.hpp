@@ -60,6 +60,7 @@ private:
   generateBoard(const v3uz dimensions, std::uint32_t bombs);
 
   // Render related methods
+  void loadUniformLocations();
   void loadCubeMesh(const std::span<const v3f> mesh,
                     const std::span<const v2f> textureCoords);
   bool setupVAO(GLuint &vertexArrayID, GLuint &cellInstanceBufferID);
@@ -87,6 +88,11 @@ private:
 
   /// Render data
   Program shaderProgram;
+  // Uniform caches
+  GLuint cellSizeLoc_ = -1;
+  GLuint viewLoc_ = -1;
+  GLuint projectionLoc_ = -1;
+  GLuint textureLoc_ = -1;
 
   // Cube vertex position buffer
   GLuint cubeMeshID;

@@ -4,6 +4,7 @@
 #include <limits>
 #include <logzy/logzy.hpp>
 #include <ranges>
+#include <unordered_map>
 
 #include "debug_utils.hpp"
 #include "glad.h"
@@ -21,11 +22,10 @@ void Board::draw(const m4x4f &view, const m4x4f &projection) {
 
   shaderProgram.use();
 
-  // TODO :: Cache the location of uniforms
-  shaderProgram.setFloat("uCellSize", cellSize);
-  shaderProgram.setM4x4("view", view);
-  shaderProgram.setM4x4("projection", projection);
-  shaderProgram.setInt("Texture", 0);
+  shaderProgram.setFloat(cellSizeLoc_, cellSize);
+  shaderProgram.setM4x4(viewLoc_, view);
+  shaderProgram.setM4x4(projectionLoc_, projection);
+  shaderProgram.setInt(textureLoc_, 0);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(
@@ -315,6 +315,7 @@ void main() {
     return std::nullopt;
   }
   board->shaderProgram = std::move(*programOpt);
+  board->loadUniformLocations();
 
   if (!board->setupVAO(board->opaqueVertexArrayID,
                        board->opaqueCellInstanceBufferID)) {
@@ -334,6 +335,21 @@ void main() {
   return board;
 }
 
+void Board::loadUniformLocations() {
+  std::unordered_map<std::string, GLuint *> fieldMaps{
+      {"uCellSize", &cellSizeLoc_},
+      {"view", &viewLoc_},
+      {"projection", &projectionLoc_},
+      {"Texture", &textureLoc_}};
+
+  for (const auto &[name, field] : fieldMaps) {
+    if (auto fieldOpt = shaderProgram.getUniformLocation(name)) {
+      *field = *fieldOpt;
+    } else {
+      logzy::error("Coulnd't find uniform location for: {}", name);
+    }
+  }
+}
 void Board::loadCubeMesh(const std::span<const v3f> mesh,
                          const std::span<const v2f> textureCoords) {
 

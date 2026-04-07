@@ -15,6 +15,7 @@ struct Crosshair {
 private:
   Program shaderProgram; // Later this would could be whole HUD shader
 
+  GLuint projectionLoc_ = -1;
   GLuint vao;
   GLuint vbo;
 };

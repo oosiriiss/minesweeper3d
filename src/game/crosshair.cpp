@@ -45,6 +45,12 @@ Crosshair::Crosshair(v2u screenSize, v2u size, v3f color) {
   // come, But then i could organize the vertices with orthographic projection
   // and not SQUARE_VERTICES, or just calculate it here and upload the
   shaderProgram.use();
+
+  if (auto projectionOpt = shaderProgram.getUniformLocation("projection")) {
+    projectionLoc_ = *projectionOpt;
+  } else {
+    logzy::error("coulnd't get projectioin uniform location for crosshair");
+  }
   shaderProgram.setM4x4(
       "model",
       scale(translate(identity<float, 4>(),
@@ -79,7 +85,7 @@ Crosshair::Crosshair(v2u screenSize, v2u size, v3f color) {
 void Crosshair::draw(const m4x4f &proj) const {
 
   shaderProgram.use();
-  shaderProgram.setM4x4("projection", proj);
+  shaderProgram.setM4x4(projectionLoc_, proj);
   glBindVertexArray(vao);
 
   glDrawArrays(GL_TRIANGLES, 0, 6);

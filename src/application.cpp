@@ -302,9 +302,10 @@ void drawRenderData(const ProfilerData &data) {
               static_cast<std::uint32_t>(1.0 / data.totalFrameMs * 1000.0));
   ImGui::Text("Frame time [ms]: %.3f", data.totalFrameMs);
   ImGui::Text("CPU update time [ms]: %.3f", data.updateMs);
-  ImGui::Text("UI time [ms]: %.3f", data.uiMs);
   ImGui::Text("CPU Render time [ms]: %.3f", data.cpuRenderMs);
   ImGui::Text("GPU Render time [ms]: %.3f", data.gpuRenderMs);
+  ImGui::Text("UI Update time [ms]: %.3f", data.uiUpdateMs);
+  ImGui::Text("UI Render time [ms]: %.3f", data.uiRenderMs);
   ImGui::Text("Wait  time [ms]: %.3f", data.waitTime);
   ImGui::Text("Frame number: %llu", data.frameCounter);
 
@@ -365,10 +366,16 @@ void Application::run() {
 
   // Profilers
 
-  GLuint queryID[2];
-  glGenQueries(2, queryID);
+  // triple buffering
+  constexpr int queryBuffers = 3;
+  GLuint queryID[queryBuffers];
+  glGenQueries(queryBuffers, queryID);
+
+  printf("queryID[0]=%u queryID[1]=%u\n", queryID[0], queryID[1]);
 
   ProfilerData profilerData{};
+
+  static GLsync frameSync = nullptr;
 
   while (!glfwWindowShouldClose(mainWindow_)) {
     glfwPollEvents();
@@ -378,6 +385,16 @@ void Application::run() {
     float dt = time - lastTime;
     lastTime = time;
     ++profilerData.frameCounter;
+    {
+      ScopedTimer waitTimer(profilerData.waitTime);
+      if (frameSync) {
+        // Czekamy aż GPU faktycznie skończy poprzednią klatkę
+        glClientWaitSync(frameSync, GL_SYNC_FLUSH_COMMANDS_BIT,
+                         1000000000); // timeout 1s
+        glDeleteSync(frameSync);
+        frameSync = nullptr;
+      }
+    }
 
     // Seconds to ms
     profilerData.totalFrameMs = dt * 1000.0;
@@ -389,9 +406,11 @@ void Application::run() {
     {
       ScopedTimer renderTimer(profilerData.cpuRenderMs);
       // Writing
-      const int frontBuffer = profilerData.frameCounter % 2;
-      // Reading
-      const int backBuffer = 1 - frontBuffer;
+      const int frontBuffer = profilerData.frameCounter % queryBuffers;
+      // Reading buffer delayed by queryBuffers-1 frames
+      const int backBuffer =
+          (profilerData.frameCounter - (queryBuffers - 1) + queryBuffers) %
+          queryBuffers;
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       const m4x4f &v = camera.getView();
@@ -403,21 +422,19 @@ void Application::run() {
 
       glEndQuery(GL_TIME_ELAPSED);
 
-      if (profilerData.frameCounter >= 2) {
-        GLuint available = 0;
-        glGetQueryObjectuiv(queryID[backBuffer], GL_QUERY_RESULT_AVAILABLE,
-                            &available);
+      GLuint available = 1;
+      glGetQueryObjectuiv(queryID[backBuffer], GL_QUERY_RESULT_AVAILABLE,
+                          &available);
 
-        if (available) {
-          GLuint64 nanosElapsed = 0;
-          glGetQueryObjectui64v(queryID[backBuffer], GL_QUERY_RESULT,
-                                &nanosElapsed);
-          profilerData.gpuRenderMs = nanosElapsed / 1'000'000.0;
-        }
+      if (profilerData.frameCounter >= 3 && available) {
+        GLuint64 nanosElapsed = 0;
+        glGetQueryObjectui64v(queryID[backBuffer], GL_QUERY_RESULT,
+                              &nanosElapsed);
+        profilerData.gpuRenderMs = nanosElapsed / 1'000'000.0;
       }
     }
     {
-      ScopedTimer uiTimer(profilerData.uiMs);
+      ScopedTimer uiTimer(profilerData.uiUpdateMs);
 
       ImGui_ImplOpenGL3_NewFrame();
       ImGui_ImplGlfw_NewFrame();
@@ -430,11 +447,15 @@ void Application::run() {
       }
 
       ImGui::Render();
+    }
+    {
+      ScopedTimer uiTimer(profilerData.uiRenderMs);
       ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     }
     {
       ScopedTimer systemTimer(profilerData.waitTime);
       glfwSwapBuffers(mainWindow_);
+      frameSync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     }
   }
   glDeleteQueries(2, queryID);

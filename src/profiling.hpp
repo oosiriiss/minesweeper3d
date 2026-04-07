@@ -6,7 +6,8 @@ struct ProfilerData {
   double updateMs{0.0};
   double cpuRenderMs{0.0};
   double gpuRenderMs{0.0};
-  double uiMs{0.0};
+  double uiUpdateMs{0.0};
+  double uiRenderMs{0.0};
   double waitTime{0.0};
   std::uint64_t frameCounter{0};
 };
