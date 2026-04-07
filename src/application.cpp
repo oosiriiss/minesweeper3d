@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <logzy/logzy.hpp>
+#include <set>
 
 #include "debug_utils.hpp"
 #include "game/board.hpp"
@@ -12,16 +13,11 @@
 #include "imgui_impl_opengl3.h"
 #include "render/camera.hpp"
 #include "resource_manager.hpp"
+#include "settings.hpp"
 
 static void GLFWErrorCallback(int code, const char *description) {
   logzy::error("GLFW Error occurred. Code {}. Description: {}", code,
                description);
-}
-
-static void GLFWKeyCallback(GLFWwindow *window, int key, int scancode,
-                            int action, int mods) {
-  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
 static void loadTextures() {
@@ -89,7 +85,6 @@ static auto initializeMainGLFWWindow(GLFWwindow *window) -> bool {
 
   // TODO :: In theory these could fail too
   glfwSetErrorCallback(GLFWErrorCallback);
-  glfwSetKeyCallback(window, GLFWKeyCallback);
 
   // Disabling cursor when focused
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -160,21 +155,36 @@ auto Application::initialize() -> bool {
   return true;
 }
 
-static void handleInputs(const Input &input, Board &board, Camera &camera,
-                         float dt) {
+static void handleInputs(const Input &input, const Settings &settings,
+                         Board &board, Camera &camera, GLFWwindow *window,
+                         bool &menuOpen, float dt) {
 
-  constexpr float cameraSpeed = 10.0F;
-  constexpr float horizontalSensitivity = 5.f;
-  constexpr float verticalSensitivity = horizontalSensitivity / 1.5f;
+  // Showing cursor when alt is pressed
+  if (input.isPressed(Key::Escape)) {
+    menuOpen = !menuOpen;
+    if (menuOpen) {
+      glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
+    } else {
+      glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    }
+  }
+
+  // Game inputs are ignored in cursor/ui mode
+  if (menuOpen) {
+    return;
+  }
+
+  //////////////////////////////////
+  /// Game inputs
 
   // Mouse movement
   v2d mouseDelta = input.getMouseDelta();
   camera.rotate(vec3<float>(
-      static_cast<float>(mouseDelta.data[0][1]) * horizontalSensitivity * dt,
-      static_cast<float>(-mouseDelta.data[0][0]) * verticalSensitivity * dt,
+      static_cast<float>(mouseDelta.data[0][1]) * settings.sensitivity * dt,
+      static_cast<float>(-mouseDelta.data[0][0]) * settings.sensitivity * dt,
       0.0F));
 
-  float cameraDistance = cameraSpeed * dt;
+  float cameraDistance = settings.cameraSpeed * dt;
 
   if (input.isDown(Key::A)) {
     camera.move(Camera::Direction::Left, cameraDistance);
@@ -218,26 +228,72 @@ static void handleInputs(const Input &input, Board &board, Camera &camera,
   }
 }
 
+static void drawMenu(GLFWwindow *window, Settings &settings) {
+
+  constexpr float minMovementSpeed = 1.0f;
+  constexpr float maxMovementSpeed = 20.0f;
+
+  constexpr float minSensitivity = 0.01f;
+  constexpr float maxSensitivity = 20.0f;
+
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+  {
+    const ImGuiViewport *vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+    ImGuiWindowFlags flags = 0;
+    flags |= ImGuiWindowFlags_NoTitleBar;
+    flags |= ImGuiWindowFlags_NoCollapse;
+    flags |= ImGuiWindowFlags_NoResize;
+    flags |= ImGuiWindowFlags_NoMove;
+    flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    flags |= ImGuiWindowFlags_NoNavFocus;
+    ImGui::Begin("Settings", nullptr, flags);
+
+    ImGui::SetWindowFontScale(3.0f);
+    ImVec2 cursorBeforeMenu = ImGui::GetCursorPos();
+
+    const char *menuText = "Menu";
+    ImVec2 menuTextSize = ImGui::CalcTextSize(menuText);
+    float menuX = (vp->WorkSize.x - menuTextSize.x) * 0.5f;
+    ImGui::SetCursorPos((ImVec2(menuX, cursorBeforeMenu.y)));
+    ImGui::Text("%s", menuText);
+    ImGui::SetCursorPos(
+        (ImVec2(cursorBeforeMenu.x, cursorBeforeMenu.y + menuTextSize.y)));
+    ImGui::SetWindowFontScale(1.0f);
+
+      ImGui::Separator();
+
+    {
+      ImGui::Text("%s", "Settings");
+      constexpr float sliderMaxWidth = 400.0f;
+      float availableWidth = ImGui::GetContentRegionAvail().x;
+      float sliderWidth = std::min(availableWidth, sliderMaxWidth);
+      ImGui::PushItemWidth(sliderWidth);
+      ImGui::SliderFloat("Mouse sensitivity", &settings.sensitivity,
+                         minSensitivity, maxSensitivity);
+      ImGui::SliderFloat("Player movement speed", &settings.cameraSpeed,
+                         minMovementSpeed, maxMovementSpeed);
+      ImGui::PopItemWidth();
+    }
+    if (ImGui::Button("Exit")) {
+      glfwSetWindowShouldClose(window, true);
+    }
+    ImGui::End();
+  }
+
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
 static void drawHUD(const Crosshair &cs, const m4x4f &proj) {
   // Drawing ui
   // Static ui doesnt need depth
   glDisable(GL_DEPTH_TEST);
   // Crosshair
   cs.draw(proj);
-
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-
-  {
-    ImGui::Begin("Test ImGui window!");
-    ImGui::Text("ImGui text");
-    ImGui::Text("ImGui text");
-    ImGui::End();
-  }
-
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
   // Resetting depth test
   glEnable(GL_DEPTH_TEST);
@@ -249,8 +305,11 @@ void Application::run() {
   constexpr v3f cameraInitialPosition = vec3<float>(.0F, .0F, 20.0F);
   constexpr v3f cameraArbitraryUp = vec3<float>(0.0F, 1.0F, 0.0F);
 
-  // TODO :: Not paying too much attention to this as it will be refactored into
-  // scenes later
+  bool menuOpen{false};
+  Settings settings;
+
+  // TODO :: Not paying too much attention to this as it will be refactored
+  // into scenes later
   Board board;
   constexpr size_t BOARD_SIZE{10};
   if (auto boardOpt = Board::create(v3uz{BOARD_SIZE, BOARD_SIZE, BOARD_SIZE})) {
@@ -286,13 +345,16 @@ void Application::run() {
     double time = static_cast<float>(glfwGetTime());
     float dt = time - lastTime;
     lastTime = time;
-    handleInputs(input_, board, camera, dt);
+    handleInputs(input_, settings, board, camera, mainWindow_, menuOpen, dt);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     const m4x4f &v = camera.getView();
 
     board.draw(v, persp);
     drawHUD(crosshair, ortho);
+    if (menuOpen) {
+      drawMenu(mainWindow_, settings);
+    }
 
     glfwSwapBuffers(mainWindow_);
   }
