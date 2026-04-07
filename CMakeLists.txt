@@ -10,9 +10,15 @@ include(FetchContent)
 FetchContent_Declare(
    logzy
    GIT_REPOSITORY https://github.com/oosiriiss/logzy
-   GIT_TAG 0.2.6
+   GIT_TAG f78a0215f1c5733be803eecabe1e96c40f0e8375 # 0.1
 )
-FetchContent_MakeAvailable(logzy)
+FetchContent_Declare(
+  glfw
+  GIT_REPOSITORY https://github.com/glfw/glfw
+  GIT_TAG        7b6aead9fb88b3623e3b3725ebb42670cbe4c579 # 3.4
+)
+FetchContent_MakeAvailable(logzy glfw)
+
 
 add_library(
    minesweeper3d-lib
@@ -81,8 +87,6 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 # TODO Turn off building examples once base is set up
 set(GLFW_BUILD_EXAMPLES ON CACHE BOOL "" FORCE)
 
-add_subdirectory(./vendor/glfw)
-
 include_directories(./vendor/glad)
 include_directories(./vendor/glfw)
 include_directories(./vendor/stb)
@@ -93,7 +97,7 @@ find_package(OpenGL REQUIRED)
 
 
 
-target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy)
+target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy glfw)
 target_link_libraries(minesweeper3d minesweeper3d-lib)
 
 add_subdirectory(./tests)
