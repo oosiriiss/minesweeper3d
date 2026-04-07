@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <logzy/logzy.hpp>
 #include <set>
+#include <system_error>
 
 #include "debug_utils.hpp"
 #include "game/board.hpp"
@@ -11,6 +12,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "profiling.hpp"
 #include "render/camera.hpp"
 #include "resource_manager.hpp"
 #include "settings.hpp"
@@ -236,9 +238,6 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
   constexpr float minSensitivity = 0.01f;
   constexpr float maxSensitivity = 20.0f;
 
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
   {
     const ImGuiViewport *vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->WorkPos);
@@ -248,8 +247,8 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
     flags |= ImGuiWindowFlags_NoCollapse;
     flags |= ImGuiWindowFlags_NoResize;
     flags |= ImGuiWindowFlags_NoMove;
-    flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
-    flags |= ImGuiWindowFlags_NoNavFocus;
+    // flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    // flags |= ImGuiWindowFlags_NoNavFocus;
     ImGui::Begin("Settings", nullptr, flags);
 
     ImGui::SetWindowFontScale(3.0f);
@@ -264,7 +263,7 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
         (ImVec2(cursorBeforeMenu.x, cursorBeforeMenu.y + menuTextSize.y)));
     ImGui::SetWindowFontScale(1.0f);
 
-      ImGui::Separator();
+    ImGui::Separator();
 
     {
       ImGui::Text("%s", "Settings");
@@ -283,20 +282,46 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
     }
     ImGui::End();
   }
+}
 
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+void drawRenderData(const ProfilerData &data) {
+
+  ImGui::SetNextWindowPos({0, 0});
+  ImGuiWindowFlags flags = 0;
+  flags |= ImGuiWindowFlags_NoTitleBar;
+  flags |= ImGuiWindowFlags_NoCollapse;
+  flags |= ImGuiWindowFlags_NoResize;
+  flags |= ImGuiWindowFlags_NoMove;
+  flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+  flags |= ImGuiWindowFlags_NoNavFocus;
+  flags |= ImGuiWindowFlags_AlwaysAutoResize;
+
+  ImGui::Begin("Frame data", nullptr, flags);
+
+  ImGui::Text("FPS: %d",
+              static_cast<std::uint32_t>(1.0 / data.totalFrameMs * 1000.0));
+  ImGui::Text("Frame time [ms]: %.3f", data.totalFrameMs);
+  ImGui::Text("CPU update time [ms]: %.3f", data.updateMs);
+  ImGui::Text("UI time [ms]: %.3f", data.uiMs);
+  ImGui::Text("CPU Render time [ms]: %.3f", data.cpuRenderMs);
+  ImGui::Text("GPU Render time [ms]: %.3f", data.gpuRenderMs);
+  ImGui::Text("Wait  time [ms]: %.3f", data.waitTime);
+  ImGui::Text("Frame number: %llu", data.frameCounter);
+
+  ImGui::End();
 }
 
 static void drawHUD(const Crosshair &cs, const m4x4f &proj) {
   // Drawing ui
   // Static ui doesnt need depth
-  glDisable(GL_DEPTH_TEST);
+  // glDisable(GL_DEPTH_TEST);
+  //
+
   // Crosshair
   cs.draw(proj);
 
   // Resetting depth test
-  glEnable(GL_DEPTH_TEST);
+  // glEnable(GL_DEPTH_TEST);
 }
 
 void Application::run() {
@@ -338,6 +363,13 @@ void Application::run() {
   auto persp = perspective(fov, ratio, near, far);
   auto ortho = orthographic(0.0f, windowWidth, 0.0F, windowHeight, -1.0f);
 
+  // Profilers
+
+  GLuint queryID[2];
+  glGenQueries(2, queryID);
+
+  ProfilerData profilerData{};
+
   while (!glfwWindowShouldClose(mainWindow_)) {
     glfwPollEvents();
     input_.update(mainWindow_);
@@ -345,19 +377,67 @@ void Application::run() {
     double time = static_cast<float>(glfwGetTime());
     float dt = time - lastTime;
     lastTime = time;
-    handleInputs(input_, settings, board, camera, mainWindow_, menuOpen, dt);
+    ++profilerData.frameCounter;
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    const m4x4f &v = camera.getView();
-
-    board.draw(v, persp);
-    drawHUD(crosshair, ortho);
-    if (menuOpen) {
-      drawMenu(mainWindow_, settings);
+    // Seconds to ms
+    profilerData.totalFrameMs = dt * 1000.0;
+    {
+      ScopedTimer updateTimer(profilerData.updateMs);
+      handleInputs(input_, settings, board, camera, mainWindow_, menuOpen, dt);
     }
 
-    glfwSwapBuffers(mainWindow_);
+    {
+      ScopedTimer renderTimer(profilerData.cpuRenderMs);
+      // Writing
+      const int frontBuffer = profilerData.frameCounter % 2;
+      // Reading
+      const int backBuffer = 1 - frontBuffer;
+
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+      const m4x4f &v = camera.getView();
+
+      glBeginQuery(GL_TIME_ELAPSED, queryID[frontBuffer]);
+
+      board.draw(v, persp);
+      drawHUD(crosshair, ortho);
+
+      glEndQuery(GL_TIME_ELAPSED);
+
+      if (profilerData.frameCounter >= 2) {
+        GLuint available = 0;
+        glGetQueryObjectuiv(queryID[backBuffer], GL_QUERY_RESULT_AVAILABLE,
+                            &available);
+
+        if (available) {
+          GLuint64 nanosElapsed = 0;
+          glGetQueryObjectui64v(queryID[backBuffer], GL_QUERY_RESULT,
+                                &nanosElapsed);
+          profilerData.gpuRenderMs = nanosElapsed / 1'000'000.0;
+        }
+      }
+    }
+    {
+      ScopedTimer uiTimer(profilerData.uiMs);
+
+      ImGui_ImplOpenGL3_NewFrame();
+      ImGui_ImplGlfw_NewFrame();
+      ImGui::NewFrame();
+
+      drawRenderData(profilerData);
+
+      if (menuOpen) {
+        drawMenu(mainWindow_, settings);
+      }
+
+      ImGui::Render();
+      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+    {
+      ScopedTimer systemTimer(profilerData.waitTime);
+      glfwSwapBuffers(mainWindow_);
+    }
   }
+  glDeleteQueries(2, queryID);
 }
 
 auto Application::shutdown() -> bool {
