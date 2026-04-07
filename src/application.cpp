@@ -160,7 +160,7 @@ auto Application::initialize() -> bool {
 
 static void handleInputs(const Input &input, const Settings &settings,
                          Board &board, Camera &camera, GLFWwindow *window,
-                         bool &menuOpen, float dt) {
+                         bool &menuOpen, bool &profilerMenuOpen, float dt) {
 
   // Showing cursor when alt is pressed
   if (input.isPressed(Key::Escape)) {
@@ -170,6 +170,10 @@ static void handleInputs(const Input &input, const Settings &settings,
     } else {
       glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
+  }
+
+  if (input.isPressed(Key::F1)) {
+    profilerMenuOpen = !profilerMenuOpen;
   }
 
   // Game inputs are ignored in cursor/ui mode
@@ -206,16 +210,6 @@ static void handleInputs(const Input &input, const Settings &settings,
   }
   if (input.isDown(Key::LeftControl)) {
     camera.move(Camera::Direction::Down, cameraDistance);
-  }
-
-  if (input.isPressed(Key::B)) {
-    board.changeCubeSize(0.01);
-    logzy::debug("Cell size is now: {}", board.cellSize);
-  }
-
-  if (input.isPressed(Key::N)) {
-    board.changeCubeSize(-0.01);
-    logzy::debug("Cell size is now: {}", board.cellSize);
   }
 
   if (input.isPressed(Key::N)) {
@@ -267,7 +261,9 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
     ImGui::Separator();
 
     {
+      ImGui::SetWindowFontScale(2.0f);
       ImGui::Text("%s", "Settings");
+      ImGui::SetWindowFontScale(1.0f);
       constexpr float sliderMaxWidth = 400.0f;
       float availableWidth = ImGui::GetContentRegionAvail().x;
       float sliderWidth = std::min(availableWidth, sliderMaxWidth);
@@ -278,6 +274,27 @@ static void drawMenu(GLFWwindow *window, Settings &settings) {
                          minMovementSpeed, maxMovementSpeed);
       ImGui::PopItemWidth();
     }
+    ImGui::Separator();
+
+    ImGui::SetWindowFontScale(2.0f);
+    ImGui::Text("Controls");
+    ImGui::SetWindowFontScale(1.0f);
+
+    static constexpr std::array controls{
+        std::pair{"Escape", "Toggle Menu / Release Mouse"},
+        std::pair{"F1", "Toggle Debug/Profiler Window"},
+        std::pair{"W, A, S, D", "Movement (Forward, Left, Back, Right)"},
+        std::pair{"Space", "Move Up"},
+        std::pair{"Left Ctrl", "Move Down"},
+        std::pair{"Mouse", "Look Around"},
+        std::pair{"Left Click", "Dig / Reveal Cell"},
+        std::pair{"Right Click", "Place Flag"},
+        std::pair{"N", "Toggle dug adjacent cell visibility"}};
+
+    for (const auto &[key, description] : controls) {
+      ImGui::Text("%s - %s", key, description);
+    }
+
     if (ImGui::Button("Exit")) {
       glfwSetWindowShouldClose(window, true);
     }
@@ -374,8 +391,8 @@ void Application::run() {
 
   printf("queryID[0]=%u queryID[1]=%u\n", queryID[0], queryID[1]);
 
+  bool profilerMenuOpen{false};
   ProfilerData profilerData{};
-
   static GLsync frameSync = nullptr;
 
   while (!glfwWindowShouldClose(mainWindow_)) {
@@ -389,9 +406,7 @@ void Application::run() {
     {
       ScopedTimer waitTimer(profilerData.waitTime);
       if (frameSync) {
-        // Czekamy aż GPU faktycznie skończy poprzednią klatkę
-        glClientWaitSync(frameSync, GL_SYNC_FLUSH_COMMANDS_BIT,
-                         1000000000); // timeout 1s
+        glClientWaitSync(frameSync, GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
         glDeleteSync(frameSync);
         frameSync = nullptr;
       }
@@ -401,7 +416,8 @@ void Application::run() {
     profilerData.totalFrameMs = dt * 1000.0;
     {
       ScopedTimer updateTimer(profilerData.updateMs);
-      handleInputs(input_, settings, board, camera, mainWindow_, menuOpen, dt);
+      handleInputs(input_, settings, board, camera, mainWindow_, menuOpen,
+                   profilerMenuOpen, dt);
     }
 
     {
@@ -441,7 +457,9 @@ void Application::run() {
       ImGui_ImplGlfw_NewFrame();
       ImGui::NewFrame();
 
-      drawRenderData(profilerData);
+      if (profilerMenuOpen) {
+        drawRenderData(profilerData);
+      }
 
       if (menuOpen) {
         drawMenu(mainWindow_, settings);

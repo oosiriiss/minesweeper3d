@@ -49,6 +49,7 @@ enum class Key : std::uint8_t {
   LeftControl,
   LeftAlt,
   Escape,
+  F1,
   __SizeGuard,
   Unknown,
 };
@@ -92,6 +93,7 @@ using GLFWMouseButton = int;
     arr[static_cast<size_t>(Key::LeftControl)] = GLFW_KEY_LEFT_CONTROL;
     arr[static_cast<size_t>(Key::LeftAlt)] = GLFW_KEY_LEFT_ALT;
     arr[static_cast<size_t>(Key::Escape)] = GLFW_KEY_ESCAPE;
+    arr[static_cast<size_t>(Key::F1)] = GLFW_KEY_F1;
 
     return arr;
   }();
