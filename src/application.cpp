@@ -105,6 +105,7 @@ static void intializeOpenGL(GLFWwindow *window) {
 
   // OpenGl global state
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
   // for transparnets
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glClearColor(0.0, 0.0, 0.0, 0.0);

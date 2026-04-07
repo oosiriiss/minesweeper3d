@@ -373,7 +373,7 @@ void Board::loadCubeMesh(const std::span<const v3f> mesh,
 [[nodiscard]] bool Board::drawSeeThroughAdjacent(size_t x, size_t y,
                                                  size_t z) const noexcept {
   const auto &currentCell = cells_[z][y][x];
-  if (!drawDugAdjacent || currentCell.state == Cell::State::Default ||
+  if (!drawDugAdjacent || currentCell.state != Cell::State::Dug ||
       currentCell.bombsAround == 0) {
     return false;
   }
