@@ -91,12 +91,9 @@ include_directories(./vendor/imgui/)
 
 find_package(OpenGL REQUIRED)
 
-# TODO :: GLM is only for now so I dont wanna bother setting up dependency properly
-find_package(glm REQUIRED)
 
 
-
-target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy glm::glm)
+target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy)
 target_link_libraries(minesweeper3d minesweeper3d-lib)
 
 add_subdirectory(./tests)
