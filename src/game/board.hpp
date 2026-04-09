@@ -112,6 +112,11 @@ private:
 };
 
 constexpr v3f Cell::getColor() const noexcept {
+
+  if (state == Cell::State::Dug && isBomb) {
+    return Color::Red;
+  }
+
   if (state == Cell::State::Flagged) {
     return Color::Purple;
   }
@@ -141,9 +146,16 @@ constexpr v3f Cell::getColor() const noexcept {
 }
 
 constexpr float Cell::getTextureIndex() const noexcept {
-  constexpr float FLAG_LAYER_INDEX =
-      27.0f; // float because its like this in shader
+  // float because its like this in shader
+  constexpr float FLAG_LAYER_INDEX = 27.0f;
+  constexpr float BOMB_LAYER_INDEX = 28.0f;
+
   constexpr float UNDUG_INDEX = 0.0f;
+
+  if (state == Cell::State::Dug && isBomb) {
+    return BOMB_LAYER_INDEX;
+  }
+
   if (state == Cell::State::Flagged) {
     return FLAG_LAYER_INDEX;
   }

@@ -419,7 +419,7 @@ void Board::updateCubeInstanceData(v3uz pointedCellCoordiantes) {
 
         bool drawSeeThrough = drawSeeThroughAdjacent(x, y, z);
 
-        if (cell.state == Cell::State::Dug && !drawSeeThrough) {
+        if (cell.state == Cell::State::Dug && !drawSeeThrough && !cell.isBomb) {
           continue;
         }
 
