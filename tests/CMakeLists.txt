@@ -26,6 +26,6 @@ function(Register_test name)
       add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
-Register_test(example_test)
+Register_test(input_test)
 
 message("Tests registered")

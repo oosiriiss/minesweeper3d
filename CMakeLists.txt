@@ -100,6 +100,9 @@ find_package(OpenGL REQUIRED)
 target_link_libraries(minesweeper3d-lib glfw OpenGL::GL logzy::logzy glfw)
 target_link_libraries(minesweeper3d minesweeper3d-lib)
 
+
+include(CTest)
+enable_testing()
 add_subdirectory(./tests)
 
 
